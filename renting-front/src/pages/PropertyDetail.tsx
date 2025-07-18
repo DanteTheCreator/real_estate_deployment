@@ -259,7 +259,11 @@ const PropertyDetail: React.FC = () => {
                   </div>
 
                   <div className="space-y-3">
-                    <Button className="w-full" size="lg">
+                    <Button 
+                      className="w-full" 
+                      size="lg"
+                      onClick={() => window.location.href = 'tel:+995599738023'}
+                    >
                       <Phone className="h-4 w-4 mr-2" />
                       Call ComfyRent
                     </Button>

@@ -13,7 +13,13 @@ const Footer: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
-            <h3 className="font-bold text-lg mb-4 text-foreground">ComfyRent</h3>
+            <div className="mb-4">
+              <img 
+                src="/logo-comfyrent.svg" 
+                alt="ComfyRent Logo" 
+                className="h-8 w-auto"
+              />
+            </div>
             <p className="text-muted-foreground text-sm mb-4">
               We guarantee a single listing per property for your searching comfort
             </p>
@@ -33,9 +39,30 @@ const Footer: React.FC = () => {
           <div>
             <h4 className="font-semibold mb-4 text-foreground">Help</h4>
             <ul className="space-y-2 text-sm">
-              <li><a href="#" className="text-muted-foreground hover:text-primary">FAQ</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-primary">Contact</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-primary">Support</a></li>
+              <li>
+                <a 
+                  href="tel:+995599738023" 
+                  className="text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                >
+                  FAQ
+                </a>
+              </li>
+              <li>
+                <a 
+                  href="tel:+995599738023" 
+                  className="text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                >
+                  Contact
+                </a>
+              </li>
+              <li>
+                <a 
+                  href="tel:+995599738023" 
+                  className="text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                >
+                  Support
+                </a>
+              </li>
             </ul>
           </div>
           

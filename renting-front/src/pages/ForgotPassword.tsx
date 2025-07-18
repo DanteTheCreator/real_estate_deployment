@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Mail, ArrowLeft, Building } from 'lucide-react';
+import { Mail, ArrowLeft } from 'lucide-react';
 
 const ForgotPassword: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -23,9 +23,12 @@ const ForgotPassword: React.FC = () => {
       <div className="min-h-[80vh] flex items-center justify-center py-12">
           <div className="w-full max-w-md">
             <div className="text-center mb-8">
-              <div className="flex items-center justify-center gap-2 mb-4">
-                <Building className="w-8 h-8 text-primary" />
-                <h1 className="text-3xl font-bold text-foreground">ComfyRent</h1>
+              <div className="flex items-center justify-center mb-4">
+                <img 
+                  src="/logo-comfyrent.svg" 
+                  alt="ComfyRent Logo" 
+                  className="h-12 w-auto"
+                />
               </div>
               <p className="text-muted-foreground">Reset your password</p>
             </div>

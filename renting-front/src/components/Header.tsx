@@ -39,10 +39,14 @@ const Header: React.FC = () => {
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
             <div 
-              className="text-2xl font-bold text-slate-800 cursor-pointer hover:text-blue-600 transition-colors"
+              className="cursor-pointer hover:opacity-80 transition-opacity"
               onClick={() => navigate('/')}
             >
-              ComfyRent
+              <img 
+                src="/logo-comfyrent.svg" 
+                alt="ComfyRent Logo" 
+                className="h-10 w-auto"
+              />
             </div>
           </div>
           

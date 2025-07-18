@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
-import { User, Mail, Lock, Phone, Eye, EyeOff, Building } from 'lucide-react';
+import { User, Mail, Lock, Phone, Eye, EyeOff } from 'lucide-react';
 import { LoginForm, RegisterForm } from '@/types';
 
 const Auth: React.FC = () => {
@@ -110,9 +110,12 @@ const Auth: React.FC = () => {
       <div className="min-h-[80vh] flex items-center justify-center py-12">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <Building className="w-8 h-8 text-primary" />
-              <h1 className="text-3xl font-bold text-foreground">ComfyRent</h1>
+            <div className="flex items-center justify-center mb-4">
+              <img 
+                src="/logo-comfyrent.svg" 
+                alt="ComfyRent Logo" 
+                className="h-12 w-auto"
+              />
             </div>
             <p className="text-muted-foreground">Welcome to Georgia's leading real estate platform</p>
           </div>
