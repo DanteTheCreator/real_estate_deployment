@@ -1,0 +1,134 @@
+version: '3.8'
+
+services:
+  # Database service
+  postgres:
+    image: postgres:15-alpine
+    container_name: real-estate-postgres
+    environment:
+      POSTGRES_DB: real-estate-rental
+      POSTGRES_USER: real-estate-user
+      POSTGRES_PASSWORD: real-estate-password
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./back-end/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - real-estate-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U real-estate-user -d real-estate-rental"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MinIO service for file storage
+  minio:
+    image: minio/minio:latest
+    container_name: real-estate-minio
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - real-estate-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  # Backend API service
+  backend:
+    build:
+      context: ./back-end
+      dockerfile: Dockerfile
+    container_name: real-estate-backend
+    environment:
+      - DATABASE_URL=postgresql://real-estate-user:real-estate-password@postgres:5432/real-estate-rental
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET_NAME=real-estate
+      - MINIO_SECURE=false
+      - CORS_ORIGINS=http://localhost:3000,http://frontend:3000
+      - SECRET_KEY=your-secret-key-change-this-in-production
+      - DEBUG=true
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - real-estate-network
+    restart: unless-stopped
+    volumes:
+      - ./back-end:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"] 
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend service
+  frontend:
+    build:
+      context: ./renting-front
+      dockerfile: Dockerfile
+    container_name: real-estate-frontend
+    environment:
+      - VITE_API_URL=http://backend:8000
+      - VITE_API_BASE_URL=http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - real-estate-network
+    restart: unless-stopped
+    volumes:
+      - ./renting-front:/app
+      - /app/node_modules
+
+  # Scraper service
+  scraper:
+    build:
+      context: ./scraper
+      dockerfile: Dockerfile
+    container_name: real-estate-scraper
+    environment:
+      - DATABASE_URL=postgresql://real-estate-user:real-estate-password@postgres:5432/real-estate-rental
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      postgres:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    networks:
+      - real-estate-network
+    restart: "no"  # Run once, don't restart automatically
+    volumes:
+      - ./scraper:/app
+    command: ["python", "scrape_to_db.py"]
+
+# Networks
+networks:
+  real-estate-network:
+    driver: bridge
+
+# Volumes
+volumes:
+  postgres_data:
+    driver: local
+  minio_data:
+    driver: local
