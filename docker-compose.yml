@@ -100,27 +100,6 @@ services:
       - ./renting-front:/app
       - /app/node_modules
 
-  # Scraper service
-  scraper:
-    build:
-      context: ./scraper
-      dockerfile: Dockerfile
-    container_name: real-estate-scraper
-    environment:
-      - DATABASE_URL=postgresql://real-estate-user:real-estate-password@postgres:5432/real-estate-rental
-      - PYTHONUNBUFFERED=1
-    depends_on:
-      postgres:
-        condition: service_healthy
-      backend:
-        condition: service_healthy
-    networks:
-      - real-estate-network
-    restart: "no"  # Run once, don't restart automatically
-    volumes:
-      - ./scraper:/app
-    command: ["python", "scrape_to_db.py"]
-
 # Networks
 networks:
   real-estate-network:

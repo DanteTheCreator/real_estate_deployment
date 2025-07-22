@@ -74,8 +74,9 @@ class Property:
         return data
 
 class EnhancedPropertyScraper:
-    def __init__(self, delay: float = 1.0):
+    def __init__(self, delay: float = 1.0, per_page: int = 100):
         self.base_url = "https://api-statements.tnet.ge/v1/statements"
+        self.per_page = min(per_page, 100)  # API max is 100
         self.headers = {
             'accept': 'application/json, text/plain, */*',
             'accept-language': 'en-US,en;q=0.9,ka;q=0.8,und;q=0.7',
@@ -101,9 +102,8 @@ class EnhancedPropertyScraper:
     def fetch_page(self, page: int, cities: str = '1', currency_id: str = '1') -> Optional[Dict]:
         """Fetch a single page of properties with retry logic"""
         params = {
-            'cities': cities,
-            'currency_id': currency_id,
             'page': str(page),
+            'per_page': str(self.per_page),
         }
         
         max_retries = 3
@@ -209,7 +209,7 @@ class EnhancedPropertyScraper:
                     logger.error(f"Error parsing property {prop_data.get('id', 'unknown')}: {e}")
             
             all_properties.extend(page_properties)
-            logger.info(f"Fetched {len(page_properties)} properties from page {page}. Total: {len(all_properties)}")
+            logger.info(f"Fetched {len(page_properties)} properties from page {page}. Total: {len(all_properties)} ({self.per_page} per page)")
             
             # Add delay between requests
             time.sleep(self.request_delay)
@@ -409,6 +409,7 @@ def main():
     parser.add_argument('--max-pages', type=int, help='Maximum number of pages to scrape (default: all)')
     parser.add_argument('--cities', default='1', help='Cities parameter for API (default: 1)')
     parser.add_argument('--delay', type=float, default=1.0, help='Delay between requests in seconds (default: 1.0)')
+    parser.add_argument('--per-page', type=int, default=100, help='Items per page (default: 100, max: 100)')
     parser.add_argument('--output-dir', default='.', help='Output directory for files (default: current directory)')
     parser.add_argument('--include-raw', action='store_true', help='Include raw API data in output files')
     parser.add_argument('--test-mode', action='store_true', help='Run in test mode (max 3 pages)')
@@ -420,7 +421,7 @@ def main():
         os.makedirs(args.output_dir)
     
     # Initialize scraper
-    scraper = EnhancedPropertyScraper(delay=args.delay)
+    scraper = EnhancedPropertyScraper(delay=args.delay, per_page=getattr(args, 'per_page', 100))
     
     # Determine max pages
     max_pages = args.max_pages
