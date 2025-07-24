@@ -50,7 +50,7 @@ export interface Property {
   updated_at?: string | null;
   // Images array to match FastAPI backend structure
   images?: PropertyImage[];
-  amenities?: string[];
+  amenities?: Amenity[];
 }
 
 // Legacy interfaces for compatibility (can be removed later)
@@ -78,6 +78,15 @@ export interface PropertyImage {
   is_primary: boolean;
   order_index: number;
   created_at: string;
+}
+
+// Amenity interface to match FastAPI backend
+export interface Amenity {
+  id: number;
+  name: string;
+  description?: string | null;
+  icon?: string | null;
+  category?: string | null;
 }
 
 export type PropertyStatus = 
@@ -140,7 +149,7 @@ export interface SearchFilters {
   location?: string;
   priceMin?: number;
   priceMax?: number;
-  currency?: 'USD' | 'GEL';
+  currency?: 'GEL' | 'USD';
   areaMin?: number;
   areaMax?: number;
   bedroomsMin?: number;
@@ -214,7 +223,7 @@ export interface PropertyForm {
   title: string;
   description: string;
   price: number;
-  currency: 'USD' | 'GEL';
+  currency: 'GEL' | 'USD';
   propertyType: string;
   listingType: string;
   area: number;
@@ -273,6 +282,7 @@ export interface UsePropertiesReturn {
   error: string | null;
   searchProperties: (filters: SearchFilters) => Promise<void>;
   loadMore: () => Promise<void>;
+  goToPage: (page: number) => Promise<void>;
   refetch: () => Promise<void>;
 }
 
@@ -310,6 +320,8 @@ export const API_ENDPOINTS = {
   PROPERTIES: '/properties/', // GET/POST /api/properties/
   PROPERTY_BY_ID: (id: string) => `/properties/${id}`, // /api/properties/{property_id}
   SEARCH_PROPERTIES: '/properties/search', // GET /api/properties/search
+  PROPERTIES_COUNT: '/properties/count', // GET /api/properties/count
+  SEARCH_PROPERTIES_COUNT: '/properties/search/count', // GET /api/properties/search/count
   FEATURED_PROPERTIES: '/properties/featured',
   MY_PROPERTIES: '/properties/my-properties/', // GET /api/properties/my-properties/
   AMENITIES: '/properties/amenities/', // GET /api/properties/amenities/

@@ -183,7 +183,7 @@ const translations = {
     'ranges.bath1': '1 bathroom',
     'ranges.bath2': '2 bathrooms',
     'ranges.bath3': '3+ bathrooms',
-    'ranges.priceUp500': 'Up to $500',
+    'ranges.priceUp500': 'Up to ₾500',
     'ranges.price500to1000': '$500 - $1,000',
     'ranges.price1000to1500': '$1,000 - $1,500',
     'ranges.price1500to2000': '$1,500 - $2,000',

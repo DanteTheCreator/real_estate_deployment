@@ -13,9 +13,10 @@ const Listings: React.FC = () => {
   // Load properties when component mounts or when search is triggered
   useEffect(() => {
     if (!hasSearched) {
-      // Initial load - show all properties
+      // Initial load - show all properties with better filtering
       const defaultFilters: SearchFilters = {
-        property_type: 'apartment'
+        // You can set default property type here if needed
+        // property_type: 'apartment'
       };
       searchProperties(defaultFilters);
       setHasSearched(true);

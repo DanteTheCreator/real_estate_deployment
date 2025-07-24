@@ -7,8 +7,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Heart, Share2, Flag, Phone, MapPin, Bed, Bath, Square, ChevronRight, Loader2, Car, Calendar, Home, DollarSign } from 'lucide-react';
 import PropertyGallery from '@/components/PropertyGallery';
+import { ReportPropertyDialog } from '@/components/ReportPropertyDialog';
 import { Property } from '@/types';
-import { propertyService } from '@/services';
+import { propertyService, contactService } from '@/services';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -30,6 +31,7 @@ const PropertyDetail: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const [savingProperty, setSavingProperty] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
 
   useEffect(() => {
     const fetchProperty = async () => {
@@ -51,7 +53,19 @@ const PropertyDetail: React.FC = () => {
         }
       } catch (error) {
         console.error('Error fetching property:', error);
-        setError('Failed to load property details');
+        let errorMsg = 'Failed to load property details';
+        if (error instanceof Error) {
+          errorMsg = error.message;
+        } else if (typeof error === 'string') {
+          errorMsg = error;
+        } else if (error && typeof error === 'object') {
+          try {
+            errorMsg = JSON.stringify(error);
+          } catch (e) {
+            errorMsg = String(error);
+          }
+        }
+        setError(errorMsg);
       } finally {
         setLoading(false);
       }
@@ -62,11 +76,8 @@ const PropertyDetail: React.FC = () => {
 
   const handleSaveProperty = async () => {
     if (!user) {
-      toast({
-        title: "Login Required",
-        description: "Please log in to save properties",
-        variant: "destructive",
-      });
+      // Open sign-in page in new tab instead of showing error
+      window.open('/auth', '_blank');
       return;
     }
 
@@ -95,6 +106,89 @@ const PropertyDetail: React.FC = () => {
     }
   };
 
+  const handleShareProperty = async () => {
+    if (!property) return;
+
+    try {
+      const success = await contactService.shareProperty(
+        property.id.toString(),
+        property.title,
+        property.price
+      );
+
+      if (success) {
+        toast({
+          title: "Property Link Shared",
+          description: "The property link has been copied to your clipboard or shared via your device.",
+        });
+      } else {
+        // Fallback: show the link in a toast for manual copying
+        const shareUrl = contactService.generateShareLink(property.id.toString(), property.title);
+        toast({
+          title: "Share this property",
+          description: shareUrl,
+          duration: 8000,
+        });
+      }
+    } catch (error) {
+      console.error('Error sharing property:', error);
+      toast({
+        title: "Error",
+        description: "Failed to share property. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleFlagProperty = () => {
+    setShowReportDialog(true);
+  };
+
+  const handleAddressClick = () => {
+    if (!property) return;
+
+    // Construct the full address for Google Maps search
+    const fullAddress = [
+      property.address,
+      property.city,
+      property.state
+    ].filter(Boolean).join(', ');
+
+    // Create Google Maps search URL
+    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`;
+    
+    // Open in new tab
+    window.open(googleMapsUrl, '_blank');
+  };
+
+  const handleScheduleViewing = () => {
+    if (!property) return;
+    
+    const propertyUrl = window.location.href;
+    const subject = `Schedule Property Viewing - ${property.title}`;
+    const body = `Hello ComfyRent Team,
+
+I would like to schedule a viewing for the following property:
+
+Property: ${property.title}
+Address: ${property.address}, ${property.city}, ${property.state}
+Rent: ₾{property.rent_amount?.toLocaleString()}/month
+Property URL: ${propertyUrl}
+
+Please contact me to arrange a convenient viewing time.
+
+Thank you!`;
+
+    // Create mailto link
+    const mailtoLink = `mailto:info.nextep.solutions@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(mailtoLink, '_blank');
+    
+    toast({
+      title: "Email Client Opened",
+      description: "Please send the email to schedule your viewing",
+    });
+  };
+
   if (loading) {
     return (
       <AppLayout>
@@ -111,6 +205,12 @@ const PropertyDetail: React.FC = () => {
         <div className="text-center py-12">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Property Not Found</h1>
           <p className="text-gray-600 mb-6">{error || 'The property you are looking for does not exist.'}</p>
+          <div className="text-left max-w-xl mx-auto bg-gray-100 rounded p-4 text-xs text-red-700">
+            <strong>Debug Info:</strong>
+            <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+              {JSON.stringify({ id, error, property }, null, 2)}
+            </pre>
+          </div>
           <Link to="/listings">
             <Button>{t('property.back')}</Button>
           </Link>
@@ -146,13 +246,17 @@ const PropertyDetail: React.FC = () => {
                 <div className="flex items-start justify-between mb-4">
                   <div>
                     <h1 className="text-3xl font-bold text-gray-900 mb-2">{property.title}</h1>
-                    <div className="flex items-center text-gray-600 mb-3">
-                      <MapPin className="h-4 w-4 mr-1" />
-                      <span>{property.address}, {property.city}</span>
+                    <div 
+                      className="flex items-center text-gray-600 mb-3 cursor-pointer hover:text-blue-600 transition-colors group" 
+                      onClick={handleAddressClick}
+                      title="Click to view on Google Maps"
+                    >
+                      <MapPin className="h-4 w-4 mr-1 group-hover:text-blue-600" />
+                      <span className="underline-offset-2 group-hover:underline">{property.address}, {property.city}</span>
                     </div>
                     <div className="flex items-center space-x-4">
                       <span className="text-3xl font-bold text-blue-600">
-                        ${property.rent_amount?.toLocaleString()}/month
+                        ₾{property.rent_amount?.toLocaleString()}/month
                       </span>
                       <Badge variant="secondary" className="bg-green-100 text-green-800">
                         {property.is_available ? 'Available' : 'Not Available'}
@@ -175,10 +279,22 @@ const PropertyDetail: React.FC = () => {
                         <Heart className={`h-4 w-4 ${isSaved ? 'fill-red-500 text-red-500' : ''}`} />
                       )}
                     </Button>
-                    <Button variant="outline" size="icon" className="h-10 w-10">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={handleShareProperty}
+                      className="h-10 w-10"
+                      title="Share this property"
+                    >
                       <Share2 className="h-4 w-4" />
                     </Button>
-                    <Button variant="outline" size="icon" className="h-10 w-10">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={handleFlagProperty}
+                      className="h-10 w-10"
+                      title="Report this property"
+                    >
                       <Flag className="h-4 w-4" />
                     </Button>
                   </div>
@@ -231,12 +347,12 @@ const PropertyDetail: React.FC = () => {
                     </div>
                     <div className="flex items-center space-x-2">
                       <DollarSign className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm text-gray-600">Deposit: ${property.security_deposit ? property.security_deposit.toLocaleString() : (property.rent_amount * 2).toLocaleString()}</span>
+                      <span className="text-sm text-gray-600">Deposit: ₾{property.security_deposit ? property.security_deposit.toLocaleString() : (property.rent_amount * 2).toLocaleString()}</span>
                     </div>
                     {property.amenities && property.amenities.length > 0 && (
                       <div className="md:col-span-2">
                         <span className="text-sm font-medium text-gray-900">Amenities: </span>
-                        <span className="text-sm text-gray-600">{property.amenities.join(', ')}</span>
+                        <span className="text-sm text-gray-600">{property.amenities.map(amenity => amenity.name).join(', ')}</span>
                       </div>
                     )}
                   </div>
@@ -251,8 +367,12 @@ const PropertyDetail: React.FC = () => {
               <Card>
                 <CardContent className="p-6">
                   <div className="text-center mb-6">
-                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Home className="h-8 w-8 text-blue-600" />
+                    <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4 p-2">
+                      <img 
+                        src="/logo-comfyrent.svg" 
+                        alt="ComfyRent Logo" 
+                        className="w-full h-full object-contain"
+                      />
                     </div>
                     <h3 className="text-lg font-semibold">Contact ComfyRent</h3>
                     <p className="text-sm text-gray-600 mt-1">Get in touch about this property</p>
@@ -281,7 +401,12 @@ const PropertyDetail: React.FC = () => {
                       )}
                       {isSaved ? 'Remove from Saved' : 'Save Listing'}
                     </Button>
-                    <Button variant="outline" className="w-full" size="lg">
+                    <Button 
+                      variant="outline" 
+                      className="w-full" 
+                      size="lg"
+                      onClick={handleScheduleViewing}
+                    >
                       Schedule Viewing
                     </Button>
                   </div>
@@ -303,11 +428,11 @@ const PropertyDetail: React.FC = () => {
                   <div className="space-y-3">
                     <div className="text-sm text-gray-600 p-3 bg-gray-50 rounded">
                       <div className="font-medium">Modern 2BR Apartment</div>
-                      <div>Downtown • $2,800/month</div>
+                      <div>Downtown • ₾2,800/month</div>
                     </div>
                     <div className="text-sm text-gray-600 p-3 bg-gray-50 rounded">
                       <div className="font-medium">Luxury Studio</div>
-                      <div>Midtown • $2,200/month</div>
+                      <div>Midtown • ₾2,200/month</div>
                     </div>
                   </div>
                   <Button variant="outline" className="w-full mt-4">
@@ -319,6 +444,16 @@ const PropertyDetail: React.FC = () => {
           </div>
         </div>
       </div>
+      
+      {/* Report Property Dialog */}
+      {property && (
+        <ReportPropertyDialog
+          isOpen={showReportDialog}
+          onClose={() => setShowReportDialog(false)}
+          propertyId={property.id.toString()}
+          propertyTitle={property.title}
+        />
+      )}
     </AppLayout>
   );
 };

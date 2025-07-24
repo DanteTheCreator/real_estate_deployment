@@ -103,29 +103,41 @@ class PropertyImageResponse(PropertyImageBase):
 
 # Property schemas
 class PropertyBase(BaseModel):
-    title: str = Field(..., min_length=1, max_length=255)
+    title: str = Field(..., max_length=255)
     description: Optional[str] = None
-    address: str = Field(..., min_length=1, max_length=500)
-    city: str = Field(..., min_length=1, max_length=100)
-    state: str = Field(..., min_length=1, max_length=100)
-    zip_code: str = Field(..., min_length=1, max_length=20)
-    country: str = Field(default="USA", max_length=100)
-    property_type: PropertyType
-    listing_type: ListingType = ListingType.RENT
-    bedrooms: int = Field(..., ge=0)
-    bathrooms: float = Field(..., ge=0)
-    square_feet: Optional[int] = Field(None, ge=0)
-    lot_size: Optional[float] = Field(None, ge=0)
-    rent_amount: float = Field(..., gt=0)
-    security_deposit: Optional[float] = Field(None, ge=0)
-    lease_duration: int = Field(default=12, ge=1)
+    address: str = Field(..., max_length=500)
+    city: str = Field(..., max_length=100)
+    state: str = Field(..., max_length=100)
+    zip_code: str = Field(..., max_length=20)
+    country: str = Field(..., max_length=100)
+    property_type: str = Field(..., max_length=50)
+    listing_type: str = Field(..., max_length=50)
+    bedrooms: int = Field(...)
+    bathrooms: float = Field(...)
+    square_feet: Optional[int] = None
+    lot_size: Optional[float] = None
+    rent_amount: float = Field(...)
+    security_deposit: Optional[float] = None
+    lease_duration: int = Field(...)
     available_date: Optional[datetime] = None
-    is_furnished: bool = False
-    pets_allowed: bool = False
-    smoking_allowed: bool = False
-    year_built: Optional[int] = Field(None, ge=1800, le=2030)
-    parking_spaces: int = Field(default=0, ge=0)
-    utilities_included: Optional[str] = None
+    is_available: bool = Field(...)
+    is_furnished: bool = Field(...)
+    pets_allowed: bool = Field(...)
+    smoking_allowed: bool = Field(...)
+    year_built: Optional[int] = None
+    parking_spaces: int = Field(...)
+    utilities_included: Optional[str] = Field(None, max_length=500)
+    district: Optional[str] = Field(None, max_length=100)
+    urban_area: Optional[str] = Field(None, max_length=100)
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    floor_number: Optional[int] = None
+    total_floors: Optional[int] = None
+    external_id: Optional[str] = Field(None, max_length=50)
+    source: Optional[str] = Field(None, max_length=50)
+    user_type: Optional[str] = Field(None, max_length=50)
+    last_scraped: Optional[datetime] = None
+    owner_id: int = Field(...)
 
 class PropertyCreate(PropertyBase):
     amenity_ids: Optional[List[int]] = []
@@ -159,8 +171,6 @@ class PropertyUpdate(BaseModel):
 
 class PropertyResponse(PropertyBase):
     id: int
-    is_available: bool
-    owner_id: int
     created_at: datetime
     updated_at: Optional[datetime]
     images: Optional[List[PropertyImageResponse]] = []
@@ -172,17 +182,46 @@ class PropertyResponse(PropertyBase):
 class PropertyListResponse(BaseModel):
     id: int
     title: str
+    description: Optional[str] = None
     address: str
     city: str
     state: str
     zip_code: str
-    property_type: PropertyType
+    country: str
+    property_type: str
+    listing_type: str
     bedrooms: int
     bathrooms: float
+    square_feet: Optional[int] = None
+    lot_size: Optional[float] = None
     rent_amount: float
+    security_deposit: Optional[float] = None
+    lease_duration: int
+    available_date: Optional[datetime] = None
     is_available: bool
+    is_furnished: bool
+    pets_allowed: bool
+    smoking_allowed: bool
+    year_built: Optional[int] = None
+    parking_spaces: int
+    utilities_included: Optional[str] = None
+    district: Optional[str] = None
+    urban_area: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    floor_number: Optional[int] = None
+    total_floors: Optional[int] = None
+    external_id: Optional[str] = None
+    source: Optional[str] = None
+    user_type: Optional[str] = None
+    last_scraped: Optional[datetime] = None
+    owner_id: int
     created_at: datetime
-    images: Optional[List[PropertyImageResponse]] = []
+    updated_at: Optional[datetime] = None
+    
+    # Images (will be loaded via relationship)
+    images: List["PropertyImageResponse"] = []
+    amenities: Optional[List[AmenityResponse]] = []
     
     class Config:
         from_attributes = True

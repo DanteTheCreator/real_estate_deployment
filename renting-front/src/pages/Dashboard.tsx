@@ -187,7 +187,7 @@ const Dashboard: React.FC = () => {
                             <div className="flex-1">
                               <h3 className="text-lg font-semibold text-slate-800 mb-2 group-hover:text-blue-600 transition-colors">{listing.title}</h3>
                               <div className="flex items-center gap-4 text-sm text-slate-600">
-                                <span className="font-medium">${listing.rent_amount.toLocaleString()} {listing.currency}</span>
+                                <span className="font-medium">₾{listing.rent_amount.toLocaleString()} {listing.currency}</span>
                                 <Badge variant={listing.status === 'active' ? 'default' : 'secondary'}>
                                   {listing.status === 'active' ? t('common.active') : t('common.inactive')}
                                 </Badge>

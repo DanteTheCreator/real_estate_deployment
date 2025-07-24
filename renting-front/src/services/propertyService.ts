@@ -6,7 +6,7 @@ export const propertyService = {
     // Convert frontend filters to backend query parameters
     const queryParams: Record<string, string | number | boolean> = {
       skip: (page - 1) * limit,
-      limit,
+      limit: Math.min(limit, 500), // Backend max is 500
     };
     
     // Map frontend filter fields to backend query parameters
@@ -15,7 +15,7 @@ export const propertyService = {
     if (filters.state) queryParams.state = filters.state;
     if (filters.property_type) {
       queryParams.property_type = filters.property_type;
-    } else if (filters.propertyType) {
+    } else if (filters.propertyType && filters.propertyType !== 'all') {
       queryParams.property_type = filters.propertyType;
     }
     if (filters.listingType) {
@@ -44,46 +44,70 @@ export const propertyService = {
     queryParams.sort_by = 'date';
     queryParams.sort_order = 'desc';
     
-    const queryString = apiService.buildQueryString(queryParams);
-    const properties = await apiService.get<Property[]>(
-      `${API_ENDPOINTS.SEARCH_PROPERTIES}${queryString}`,
-      { requiresAuth: false }
-    );
+    // Get count parameters (same as query params but without skip/limit)
+    const countParams = { ...queryParams };
+    delete countParams.skip;
+    delete countParams.limit;
+    delete countParams.sort_by;
+    delete countParams.sort_order;
     
-    // Convert array response to paginated format for frontend compatibility
+    // Get both properties and total count in parallel
+    const [properties, countResponse] = await Promise.all([
+      apiService.get<Property[]>(
+        `${API_ENDPOINTS.SEARCH_PROPERTIES}${apiService.buildQueryString(queryParams)}`,
+        { requiresAuth: false }
+      ),
+      apiService.get<{ total_count: number }>(
+        `${API_ENDPOINTS.SEARCH_PROPERTIES_COUNT}${apiService.buildQueryString(countParams)}`,
+        { requiresAuth: false }
+      )
+    ]);
+    
+    const totalCount = countResponse.total_count;
+    const hasNext = properties.length === limit && (page * limit) < totalCount;
+    const totalPages = Math.ceil(totalCount / limit);
+    
     return {
       data: properties,
       pagination: {
         currentPage: page,
-        totalPages: Math.ceil(properties.length / limit),
-        totalCount: properties.length,
-        hasNext: properties.length === limit,
+        totalPages,
+        totalCount,
+        hasNext,
         hasPrev: page > 1
       }
     };
   },
 
-  async getProperties(page = 1, limit = 12): Promise<PaginatedResponse<Property>> {
+  async getProperties(page = 1, limit = 20): Promise<PaginatedResponse<Property>> {
     const queryParams = {
       skip: (page - 1) * limit,
-      limit
+      limit: Math.min(limit, 500) // Backend max is 500
     };
     
-    const queryString = apiService.buildQueryString(queryParams);
-    const properties = await apiService.get<Property[]>(
-      `${API_ENDPOINTS.PROPERTIES}${queryString}`,
-      { requiresAuth: false }
-    );
+    // Get both properties and total count in parallel
+    const [properties, countResponse] = await Promise.all([
+      apiService.get<Property[]>(
+        `${API_ENDPOINTS.PROPERTIES}${apiService.buildQueryString(queryParams)}`,
+        { requiresAuth: false }
+      ),
+      apiService.get<{ total_count: number }>(
+        API_ENDPOINTS.PROPERTIES_COUNT,
+        { requiresAuth: false }
+      )
+    ]);
     
-    // Since backend doesn't provide pagination metadata, we'll create a simple response
-    // In a real app, the backend should provide total count
+    const totalCount = countResponse.total_count;
+    const hasNext = properties.length === limit && (page * limit) < totalCount;
+    const totalPages = Math.ceil(totalCount / limit);
+    
     return {
       data: properties,
       pagination: {
         currentPage: page,
-        totalPages: properties.length === limit ? page + 1 : page, // Estimate if there are more pages
-        totalCount: properties.length,
-        hasNext: properties.length === limit,
+        totalPages,
+        totalCount,
+        hasNext,
         hasPrev: page > 1
       }
     };
@@ -99,9 +123,9 @@ export const propertyService = {
   },
 
   async getFeaturedProperties(): Promise<Property[]> {
-    // Backend doesn't have featured endpoint, so get first few properties
+    // Get more featured properties for better main page display
     const properties = await apiService.get<Property[]>(
-      `${API_ENDPOINTS.PROPERTIES}?limit=6`,
+      `${API_ENDPOINTS.PROPERTIES}?limit=12&sort_by=date&sort_order=desc`,
       { requiresAuth: false }
     );
     
@@ -228,6 +252,28 @@ export const propertyService = {
     } catch (error) {
       console.error('Error checking if property is saved:', error);
       return false;
+    }
+  },
+
+  // Utility function to get quick property stats
+  async getPropertyStats(): Promise<{ total: number; available: number; cities: string[] }> {
+    try {
+      // Get a sample of properties to estimate stats
+      const response = await apiService.get<Property[]>(
+        `${API_ENDPOINTS.PROPERTIES}?limit=100`,
+        { requiresAuth: false }
+      );
+      
+      const cities = [...new Set(response.map(p => p.city))].slice(0, 10);
+      
+      return {
+        total: response.length > 99 ? 100 : response.length, // Estimate if we hit limit
+        available: response.filter(p => p.is_available).length,
+        cities
+      };
+    } catch (error) {
+      console.error('Error fetching property stats:', error);
+      return { total: 0, available: 0, cities: [] };
     }
   },
 };

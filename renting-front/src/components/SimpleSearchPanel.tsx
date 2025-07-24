@@ -29,7 +29,7 @@ const SimpleSearchPanel: React.FC<SimpleSearchPanelProps> = ({ className = '', o
     location: '',
     priceMin: undefined,
     priceMax: undefined,
-    currency: 'USD',
+    currency: 'GEL',
     areaMin: undefined,
     areaMax: undefined,
     bedroomsMin: undefined,
@@ -56,14 +56,14 @@ const SimpleSearchPanel: React.FC<SimpleSearchPanelProps> = ({ className = '', o
     try {
       const filters: SearchFilters = {
         query: searchForm.query || undefined,
-        property_type: searchForm.propertyType === 'all' ? undefined : searchForm.propertyType, // Don't send if 'all'
+        property_type: searchForm.propertyType === 'all' ? undefined : searchForm.propertyType,
         city: searchForm.location || undefined,
         min_rent: searchForm.priceMin,
         max_rent: searchForm.priceMax,
         min_bedrooms: searchForm.bedroomsMin,
         max_bedrooms: searchForm.bedroomsMax,
-        // Map other legacy fields
-        propertyType: searchForm.propertyType === 'all' ? undefined : searchForm.propertyType, // Don't send if 'all'
+        // Map other legacy fields for compatibility
+        propertyType: searchForm.propertyType === 'all' ? undefined : searchForm.propertyType,
         listingType: activeTab,
         location: searchForm.location || undefined,
         priceMin: searchForm.priceMin,
@@ -485,22 +485,22 @@ const SimpleSearchPanel: React.FC<SimpleSearchPanelProps> = ({ className = '', o
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="usd">USD</SelectItem>
-                  <SelectItem value="gel">GEL</SelectItem>
+                  <SelectItem value="usd">USD (₾)</SelectItem>
+                  <SelectItem value="gel">GEL (₾)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <Input
                 type="number"
-                placeholder={`${t('placeholders.minPrice')} (${searchForm.currency === 'USD' ? '$' : '₾'})`}
+                placeholder={`${t('placeholders.minPrice')} (${searchForm.currency === 'USD' ? '₾' : '₾'})`}
                 value={searchForm.priceMin}
                 onChange={(e) => setSearchForm({ ...searchForm, priceMin: Number(e.target.value) })}
                 className="h-10 border-border focus:border-primary focus:ring-primary text-center [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
               />
               <Input
                 type="number"
-                placeholder={`${t('placeholders.maxPrice')} (${searchForm.currency === 'USD' ? '$' : '₾'})`}
+                placeholder={`${t('placeholders.maxPrice')} (${searchForm.currency === 'USD' ? '₾' : '₾'})`}
                 value={searchForm.priceMax}
                 onChange={(e) => setSearchForm({ ...searchForm, priceMax: Number(e.target.value) })}
                 className="h-10 border-border focus:border-primary focus:ring-primary text-center [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"

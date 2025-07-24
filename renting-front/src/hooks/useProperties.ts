@@ -14,41 +14,75 @@ export const useProperties = (): UsePropertiesReturn => {
 
   const { addRecentSearch } = useAppContext();
 
-  const searchProperties = useCallback(async (filters: SearchFilters) => {
+  const searchProperties = useCallback(async (filters: SearchFilters, resetPage = true) => {
     setIsLoading(true);
     setError(null);
     setCurrentFilters(filters);
 
     try {
-      const response = await propertyService.searchProperties(filters, 1);
-      setProperties(response.data);
+      const pageToUse = resetPage ? 1 : currentPage;
+      const response = await propertyService.searchProperties(filters, pageToUse, 20);
+      
+      if (resetPage) {
+        setProperties(response.data);
+        setCurrentPage(1);
+      } else {
+        setProperties(response.data);
+        setCurrentPage(response.pagination.currentPage);
+      }
+      
       setTotalCount(response.pagination.totalCount);
-      setCurrentPage(response.pagination.currentPage);
       setTotalPages(response.pagination.totalPages);
       
-      // Add to recent searches
-      addRecentSearch(filters);
+      // Add to recent searches only for new searches
+      if (resetPage) {
+        addRecentSearch(filters);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to search properties');
+      setProperties([]);
+      setTotalCount(0);
+      setTotalPages(0);
     } finally {
       setIsLoading(false);
     }
-  }, [addRecentSearch]);
+  }, [addRecentSearch, currentPage]);
 
   const loadMore = useCallback(async () => {
-    if (!currentFilters || currentPage >= totalPages) return;
+    if (!currentFilters || currentPage >= totalPages || isLoading) return;
 
     setIsLoading(true);
     try {
-      const response = await propertyService.searchProperties(currentFilters, currentPage + 1);
+      const response = await propertyService.searchProperties(currentFilters, currentPage + 1, 20);
       setProperties(prev => [...prev, ...response.data]);
       setCurrentPage(response.pagination.currentPage);
+      setTotalPages(response.pagination.totalPages);
+      setTotalCount(response.pagination.totalCount);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load more properties');
     } finally {
       setIsLoading(false);
     }
-  }, [currentFilters, currentPage, totalPages]);
+  }, [currentFilters, currentPage, totalPages, isLoading]);
+
+  const goToPage = useCallback(async (page: number) => {
+    if (!currentFilters || page < 1 || page > totalPages || page === currentPage) return;
+
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const response = await propertyService.searchProperties(currentFilters, page, 20);
+      setProperties(response.data);
+      setCurrentPage(response.pagination.currentPage);
+      setTotalPages(response.pagination.totalPages);
+      setTotalCount(response.pagination.totalCount);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load properties');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentFilters, totalPages, currentPage]);
 
   const refetch = useCallback(async () => {
     if (!currentFilters) return;
@@ -64,6 +98,7 @@ export const useProperties = (): UsePropertiesReturn => {
     error,
     searchProperties,
     loadMore,
+    goToPage,
     refetch,
   };
 };

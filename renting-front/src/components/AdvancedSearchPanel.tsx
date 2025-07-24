@@ -137,14 +137,9 @@ const AdvancedSearchPanel: React.FC<AdvancedSearchPanelProps> = ({ onSearch }) =
     return count;
   }, [filters]);
 
-  // Format currency display
+    // Format currency display
   const formatCurrency = (amount: number) => {
-    const symbol = filters.currency === 'usd' ? '$' : '₾';
-    if (amount >= 1000000) {
-      return `${symbol}${(amount / 1000000).toFixed(1)}M`;
-    } else if (amount >= 1000) {
-      return `${symbol}${(amount / 1000).toFixed(0)}K`;
-    }
+    const symbol = filters.currency === 'usd' ? '₾' : '₾';
     return `${symbol}${amount.toLocaleString()}`;
   };
 
@@ -322,7 +317,7 @@ const AdvancedSearchPanel: React.FC<AdvancedSearchPanelProps> = ({ onSearch }) =
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="gel">Georgian Lari (₾)</SelectItem>
-                    <SelectItem value="usd">US Dollar ($)</SelectItem>
+                    <SelectItem value="usd">US Dollar (₾)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

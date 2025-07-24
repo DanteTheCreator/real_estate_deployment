@@ -16,7 +16,7 @@ router = APIRouter(prefix="/properties", tags=["Properties"])
 @router.get("/", response_model=List[PropertyListResponse])
 async def get_properties(
     skip: int = Query(0, ge=0),
-    limit: int = Query(10, ge=1, le=100),
+    limit: int = Query(10, ge=1, le=500),
     city: Optional[str] = None,
     state: Optional[str] = None,
     property_type: Optional[str] = None,
@@ -31,7 +31,7 @@ async def get_properties(
     """Get all available properties with filtering"""
     query = db.query(Property).options(joinedload(Property.images)).filter(Property.is_available == True)
     
-    # Apply filters
+    # Apply filters based on actual database schema
     if city:
         query = query.filter(Property.city.ilike(f"%{city}%"))
     if state:
@@ -50,123 +50,10 @@ async def get_properties(
         query = query.filter(Property.pets_allowed == pets_allowed)
     if is_furnished is not None:
         query = query.filter(Property.is_furnished == is_furnished)
+    if is_furnished is not None:
+        query = query.filter(Property.is_furnished == is_furnished)
     
     properties = query.offset(skip).limit(limit).all()
-    return [PropertyListResponse.model_validate(prop) for prop in properties]
-
-@router.get("/search", response_model=List[PropertyListResponse])
-async def search_properties(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(10, ge=1, le=100),
-    query: Optional[str] = Query(None, description="General search query"),
-    city: Optional[str] = Query(None, description="City filter"),
-    state: Optional[str] = Query(None, description="State filter"),
-    property_type: Optional[str] = Query(None, description="Property type filter"),
-    listing_type: Optional[str] = Query(None, description="Listing type filter (rent, sale, lease, daily, mortgage)"),
-    min_bedrooms: Optional[int] = Query(None, ge=0, description="Minimum bedrooms"),
-    max_bedrooms: Optional[int] = Query(None, ge=0, description="Maximum bedrooms"),
-    min_bathrooms: Optional[float] = Query(None, ge=0, description="Minimum bathrooms"),
-    max_bathrooms: Optional[float] = Query(None, ge=0, description="Maximum bathrooms"),
-    min_rent: Optional[float] = Query(None, ge=0, description="Minimum rent"),
-    max_rent: Optional[float] = Query(None, ge=0, description="Maximum rent"),
-    min_square_feet: Optional[int] = Query(None, ge=0, description="Minimum square feet"),
-    max_square_feet: Optional[int] = Query(None, ge=0, description="Maximum square feet"),
-    pets_allowed: Optional[bool] = Query(None, description="Pets allowed filter"),
-    is_furnished: Optional[bool] = Query(None, description="Furnished filter"),
-    smoking_allowed: Optional[bool] = Query(None, description="Smoking allowed filter"),
-    year_built_min: Optional[int] = Query(None, ge=1800, le=2030, description="Minimum year built"),
-    year_built_max: Optional[int] = Query(None, ge=1800, le=2030, description="Maximum year built"),
-    parking_spaces_min: Optional[int] = Query(None, ge=0, description="Minimum parking spaces"),
-    sort_by: Optional[str] = Query("date", description="Sort by field"),
-    sort_order: Optional[str] = Query("desc", description="Sort order (asc/desc)"),
-    db: Session = Depends(get_db)
-):
-    """Search properties with advanced filters"""
-    query_obj = db.query(Property).options(joinedload(Property.images)).filter(Property.is_available == True)
-    
-    # General search query (search in title, description, address)
-    if query:
-        search_filter = or_(
-            Property.title.ilike(f"%{query}%"),
-            Property.description.ilike(f"%{query}%"),
-            Property.address.ilike(f"%{query}%"),
-            Property.city.ilike(f"%{query}%"),
-            Property.state.ilike(f"%{query}%")
-        )
-        query_obj = query_obj.filter(search_filter)
-    
-    # Location filters
-    if city:
-        query_obj = query_obj.filter(Property.city.ilike(f"%{city}%"))
-    if state:
-        query_obj = query_obj.filter(Property.state.ilike(f"%{state}%"))
-    
-    # Property type filter
-    if property_type:
-        query_obj = query_obj.filter(Property.property_type == property_type)
-    
-    # Listing type filter
-    if listing_type:
-        query_obj = query_obj.filter(Property.listing_type == listing_type)
-    
-    # Bedroom filters
-    if min_bedrooms is not None:
-        query_obj = query_obj.filter(Property.bedrooms >= min_bedrooms)
-    if max_bedrooms is not None:
-        query_obj = query_obj.filter(Property.bedrooms <= max_bedrooms)
-    
-    # Bathroom filters
-    if min_bathrooms is not None:
-        query_obj = query_obj.filter(Property.bathrooms >= min_bathrooms)
-    if max_bathrooms is not None:
-        query_obj = query_obj.filter(Property.bathrooms <= max_bathrooms)
-    
-    # Price filters
-    if min_rent is not None:
-        query_obj = query_obj.filter(Property.rent_amount >= min_rent)
-    if max_rent is not None:
-        query_obj = query_obj.filter(Property.rent_amount <= max_rent)
-    
-    # Area filters
-    if min_square_feet is not None:
-        query_obj = query_obj.filter(Property.square_feet >= min_square_feet)
-    if max_square_feet is not None:
-        query_obj = query_obj.filter(Property.square_feet <= max_square_feet)
-    
-    # Feature filters
-    if pets_allowed is not None:
-        query_obj = query_obj.filter(Property.pets_allowed == pets_allowed)
-    if is_furnished is not None:
-        query_obj = query_obj.filter(Property.is_furnished == is_furnished)
-    if smoking_allowed is not None:
-        query_obj = query_obj.filter(Property.smoking_allowed == smoking_allowed)
-    
-    # Year built filters
-    if year_built_min is not None:
-        query_obj = query_obj.filter(Property.year_built >= year_built_min)
-    if year_built_max is not None:
-        query_obj = query_obj.filter(Property.year_built <= year_built_max)
-    
-    # Parking filter
-    if parking_spaces_min is not None:
-        query_obj = query_obj.filter(Property.parking_spaces >= parking_spaces_min)
-    
-    # Sorting
-    if sort_by == "price":
-        order_field = Property.rent_amount
-    elif sort_by == "area":
-        order_field = Property.square_feet
-    elif sort_by == "bedrooms":
-        order_field = Property.bedrooms
-    else:  # default to date
-        order_field = Property.created_at
-    
-    if sort_order == "asc":
-        query_obj = query_obj.order_by(order_field.asc())
-    else:
-        query_obj = query_obj.order_by(order_field.desc())
-    
-    properties = query_obj.offset(skip).limit(limit).all()
     return [PropertyListResponse.model_validate(prop) for prop in properties]
 
 @router.get("/count")
@@ -285,6 +172,237 @@ async def get_search_count(
     total_count = query_obj.count()
     return {"total_count": total_count}
 
+@router.get("/search", response_model=List[PropertyListResponse])
+async def search_properties(
+    city: Optional[str] = None,
+    state: Optional[str] = None,
+    property_type: Optional[str] = None,
+    min_rent: Optional[float] = Query(None, ge=0),
+    max_rent: Optional[float] = Query(None, ge=0),
+    min_bedrooms: Optional[int] = Query(None, ge=0),
+    max_bedrooms: Optional[int] = Query(None, ge=0),
+    pets_allowed: Optional[bool] = None,
+    is_furnished: Optional[bool] = None,
+    db: Session = Depends(get_db)
+):
+    """Get count of available properties with filtering"""
+    query = db.query(Property).filter(Property.is_available == True)
+    
+    # Apply same filters as get_properties
+    if city:
+        query = query.filter(Property.city.ilike(f"%{city}%"))
+    if state:
+        query = query.filter(Property.state.ilike(f"%{state}%"))
+    if property_type:
+        query = query.filter(Property.property_type == property_type)
+    if min_rent is not None:
+        query = query.filter(Property.rent_amount >= min_rent)
+    if max_rent is not None:
+        query = query.filter(Property.rent_amount <= max_rent)
+    if min_bedrooms is not None:
+        query = query.filter(Property.bedrooms >= min_bedrooms)
+    if max_bedrooms is not None:
+        query = query.filter(Property.bedrooms <= max_bedrooms)
+    if pets_allowed is not None:
+        query = query.filter(Property.pets_allowed == pets_allowed)
+    if is_furnished is not None:
+        query = query.filter(Property.is_furnished == is_furnished)
+    
+    total_count = query.count()
+    return {"total_count": total_count}
+
+@router.get("/search/count")
+async def get_search_count(
+    query: Optional[str] = Query(None, description="General search query"),
+    city: Optional[str] = Query(None, description="City filter"),
+    state: Optional[str] = Query(None, description="State filter"),
+    property_type: Optional[str] = Query(None, description="Property type filter"),
+    listing_type: Optional[str] = Query(None, description="Listing type filter (rent, sale, lease, daily, mortgage)"),
+    min_bedrooms: Optional[int] = Query(None, ge=0, description="Minimum bedrooms"),
+    max_bedrooms: Optional[int] = Query(None, ge=0, description="Maximum bedrooms"),
+    min_bathrooms: Optional[float] = Query(None, ge=0, description="Minimum bathrooms"),
+    max_bathrooms: Optional[float] = Query(None, ge=0, description="Maximum bathrooms"),
+    min_rent: Optional[float] = Query(None, ge=0, description="Minimum rent"),
+    max_rent: Optional[float] = Query(None, ge=0, description="Maximum rent"),
+    min_square_feet: Optional[int] = Query(None, ge=0, description="Minimum square feet"),
+    max_square_feet: Optional[int] = Query(None, ge=0, description="Maximum square feet"),
+    pets_allowed: Optional[bool] = Query(None, description="Pets allowed filter"),
+    is_furnished: Optional[bool] = Query(None, description="Furnished filter"),
+    smoking_allowed: Optional[bool] = Query(None, description="Smoking allowed filter"),
+    year_built_min: Optional[int] = Query(None, ge=1800, le=2030, description="Minimum year built"),
+    year_built_max: Optional[int] = Query(None, ge=1800, le=2030, description="Maximum year built"),
+    parking_spaces_min: Optional[int] = Query(None, ge=0, description="Minimum parking spaces"),
+    db: Session = Depends(get_db)
+):
+    """Get count of search results with advanced filters"""
+    query_obj = db.query(Property).filter(Property.is_available == True)
+    
+    # Apply same filters as search_properties
+    if query:
+        search_filter = or_(
+            Property.title.ilike(f"%{query}%"),
+            Property.description.ilike(f"%{query}%"),
+            Property.address.ilike(f"%{query}%"),
+            Property.city.ilike(f"%{query}%"),
+            Property.state.ilike(f"%{query}%")
+        )
+        query_obj = query_obj.filter(search_filter)
+    
+    if city:
+        query_obj = query_obj.filter(Property.city.ilike(f"%{city}%"))
+    if state:
+        query_obj = query_obj.filter(Property.state.ilike(f"%{state}%"))
+    if property_type:
+        query_obj = query_obj.filter(Property.property_type == property_type)
+    if listing_type:
+        query_obj = query_obj.filter(Property.listing_type == listing_type)
+    if min_bedrooms is not None:
+        query_obj = query_obj.filter(Property.bedrooms >= min_bedrooms)
+    if max_bedrooms is not None:
+        query_obj = query_obj.filter(Property.bedrooms <= max_bedrooms)
+    if min_bathrooms is not None:
+        query_obj = query_obj.filter(Property.bathrooms >= min_bathrooms)
+    if max_bathrooms is not None:
+        query_obj = query_obj.filter(Property.bathrooms <= max_bathrooms)
+    if min_rent is not None:
+        query_obj = query_obj.filter(Property.rent_amount >= min_rent)
+    if max_rent is not None:
+        query_obj = query_obj.filter(Property.rent_amount <= max_rent)
+    if min_square_feet is not None:
+        query_obj = query_obj.filter(Property.square_feet >= min_square_feet)
+    if max_square_feet is not None:
+        query_obj = query_obj.filter(Property.square_feet <= max_square_feet)
+    if pets_allowed is not None:
+        query_obj = query_obj.filter(Property.pets_allowed == pets_allowed)
+    if is_furnished is not None:
+        query_obj = query_obj.filter(Property.is_furnished == is_furnished)
+    if smoking_allowed is not None:
+        query_obj = query_obj.filter(Property.smoking_allowed == smoking_allowed)
+    if year_built_min is not None:
+        query_obj = query_obj.filter(Property.year_built >= year_built_min)
+    if year_built_max is not None:
+        query_obj = query_obj.filter(Property.year_built <= year_built_max)
+    if parking_spaces_min is not None:
+        query_obj = query_obj.filter(Property.parking_spaces >= parking_spaces_min)
+    
+    total_count = query_obj.count()
+    return {"total_count": total_count}
+
+@router.get("/search", response_model=List[PropertyListResponse])
+async def search_properties(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1, le=500),
+    query: Optional[str] = Query(None, description="General search query"),
+    city: Optional[str] = Query(None, description="City filter"),
+    state: Optional[str] = Query(None, description="State filter"),
+    property_type: Optional[str] = Query(None, description="Property type filter"),
+    listing_type: Optional[str] = Query(None, description="Listing type filter (rent, sale, lease, daily, mortgage)"),
+    min_bedrooms: Optional[int] = Query(None, ge=0, description="Minimum bedrooms"),
+    max_bedrooms: Optional[int] = Query(None, ge=0, description="Maximum bedrooms"),
+    min_bathrooms: Optional[float] = Query(None, ge=0, description="Minimum bathrooms"),
+    max_bathrooms: Optional[float] = Query(None, ge=0, description="Maximum bathrooms"),
+    min_rent: Optional[float] = Query(None, ge=0, description="Minimum rent"),
+    max_rent: Optional[float] = Query(None, ge=0, description="Maximum rent"),
+    min_square_feet: Optional[int] = Query(None, ge=0, description="Minimum square feet"),
+    max_square_feet: Optional[int] = Query(None, ge=0, description="Maximum square feet"),
+    pets_allowed: Optional[bool] = Query(None, description="Pets allowed filter"),
+    is_furnished: Optional[bool] = Query(None, description="Furnished filter"),
+    smoking_allowed: Optional[bool] = Query(None, description="Smoking allowed filter"),
+    year_built_min: Optional[int] = Query(None, ge=1800, le=2030, description="Minimum year built"),
+    year_built_max: Optional[int] = Query(None, ge=1800, le=2030, description="Maximum year built"),
+    parking_spaces_min: Optional[int] = Query(None, ge=0, description="Minimum parking spaces"),
+    sort_by: Optional[str] = Query("date", description="Sort by field"),
+    sort_order: Optional[str] = Query("desc", description="Sort order (asc/desc)"),
+    db: Session = Depends(get_db)
+):
+    """Search properties with advanced filters"""
+    query_obj = db.query(Property).options(joinedload(Property.images)).filter(Property.is_available == True)
+    
+    # General search query (search in title, description, address)
+    if query:
+        search_filter = or_(
+            Property.title.ilike(f"%{query}%"),
+            Property.description.ilike(f"%{query}%"),
+            Property.address.ilike(f"%{query}%"),
+            Property.city.ilike(f"%{query}%"),
+            Property.state.ilike(f"%{query}%")
+        )
+        query_obj = query_obj.filter(search_filter)
+    
+    # Location filters
+    if city:
+        query_obj = query_obj.filter(Property.city.ilike(f"%{city}%"))
+    if state:
+        query_obj = query_obj.filter(Property.state.ilike(f"%{state}%"))
+    
+    # Property type filter
+    if property_type:
+        query_obj = query_obj.filter(Property.property_type == property_type)
+    
+    # Listing type filter
+    if listing_type:
+        query_obj = query_obj.filter(Property.listing_type == listing_type)
+    
+    # Bedroom filters
+    if min_bedrooms is not None:
+        query_obj = query_obj.filter(Property.bedrooms >= min_bedrooms)
+    if max_bedrooms is not None:
+        query_obj = query_obj.filter(Property.bedrooms <= max_bedrooms)
+    
+    # Bathroom filters
+    if min_bathrooms is not None:
+        query_obj = query_obj.filter(Property.bathrooms >= min_bathrooms)
+    if max_bathrooms is not None:
+        query_obj = query_obj.filter(Property.bathrooms <= max_bathrooms)
+    
+    # Price filters
+    if min_rent is not None:
+        query_obj = query_obj.filter(Property.rent_amount >= min_rent)
+    if max_rent is not None:
+        query_obj = query_obj.filter(Property.rent_amount <= max_rent)
+    
+    # Area filters
+    if min_square_feet is not None:
+        query_obj = query_obj.filter(Property.square_feet >= min_square_feet)
+    if max_square_feet is not None:
+        query_obj = query_obj.filter(Property.square_feet <= max_square_feet)
+    
+    # Feature filters
+    if pets_allowed is not None:
+        query_obj = query_obj.filter(Property.pets_allowed == pets_allowed)
+    if is_furnished is not None:
+        query_obj = query_obj.filter(Property.is_furnished == is_furnished)
+    if smoking_allowed is not None:
+        query_obj = query_obj.filter(Property.smoking_allowed == smoking_allowed)
+    
+    # Year built filters
+    if year_built_min is not None:
+        query_obj = query_obj.filter(Property.year_built >= year_built_min)
+    if year_built_max is not None:
+        query_obj = query_obj.filter(Property.year_built <= year_built_max)
+    
+    # Parking filter
+    if parking_spaces_min is not None:
+        query_obj = query_obj.filter(Property.parking_spaces >= parking_spaces_min)
+    
+    # Sorting
+    if sort_by == "price":
+        order_field = Property.rent_amount
+    elif sort_by == "area":
+        order_field = Property.square_feet
+    elif sort_by == "bedrooms":
+        order_field = Property.bedrooms
+    else:  # default to date
+        order_field = Property.created_at
+    
+    if sort_order == "asc":
+        query_obj = query_obj.order_by(order_field.asc())
+    else:
+        query_obj = query_obj.order_by(order_field.desc())
+    
+    properties = query_obj.offset(skip).limit(limit).all()
+    return [PropertyListResponse.model_validate(prop) for prop in properties]
+
 @router.get("/saved", response_model=List[PropertyListResponse])
 async def get_saved_properties(
     current_user: User = Depends(get_current_active_user),
@@ -324,6 +442,122 @@ async def get_saved_properties(
             created_at=prop.created_at
         ) for prop in saved_props
     ]
+
+@router.get("/count")
+async def get_properties_count(
+    city: Optional[str] = None,
+    state: Optional[str] = None,
+    property_type: Optional[str] = None,
+    min_rent: Optional[float] = Query(None, ge=0),
+    max_rent: Optional[float] = Query(None, ge=0),
+    min_bedrooms: Optional[int] = Query(None, ge=0),
+    max_bedrooms: Optional[int] = Query(None, ge=0),
+    pets_allowed: Optional[bool] = None,
+    is_furnished: Optional[bool] = None,
+    db: Session = Depends(get_db)
+):
+    """Get count of available properties with filtering"""
+    query = db.query(Property).filter(Property.is_available == True)
+    
+    # Apply same filters as get_properties
+    if city:
+        query = query.filter(Property.city.ilike(f"%{city}%"))
+    if state:
+        query = query.filter(Property.state.ilike(f"%{state}%"))
+    if property_type:
+        query = query.filter(Property.property_type == property_type)
+    if min_rent is not None:
+        query = query.filter(Property.rent_amount >= min_rent)
+    if max_rent is not None:
+        query = query.filter(Property.rent_amount <= max_rent)
+    if min_bedrooms is not None:
+        query = query.filter(Property.bedrooms >= min_bedrooms)
+    if max_bedrooms is not None:
+        query = query.filter(Property.bedrooms <= max_bedrooms)
+    if pets_allowed is not None:
+        query = query.filter(Property.pets_allowed == pets_allowed)
+    if is_furnished is not None:
+        query = query.filter(Property.is_furnished == is_furnished)
+    
+    total_count = query.count()
+    return {"total_count": total_count}
+
+@router.get("/search/count")
+async def get_search_count(
+    query: Optional[str] = Query(None, description="General search query"),
+    city: Optional[str] = Query(None, description="City filter"),
+    state: Optional[str] = Query(None, description="State filter"),
+    property_type: Optional[str] = Query(None, description="Property type filter"),
+    listing_type: Optional[str] = Query(None, description="Listing type filter (rent, sale, lease, daily, mortgage)"),
+    min_bedrooms: Optional[int] = Query(None, ge=0, description="Minimum bedrooms"),
+    max_bedrooms: Optional[int] = Query(None, ge=0, description="Maximum bedrooms"),
+    min_bathrooms: Optional[float] = Query(None, ge=0, description="Minimum bathrooms"),
+    max_bathrooms: Optional[float] = Query(None, ge=0, description="Maximum bathrooms"),
+    min_rent: Optional[float] = Query(None, ge=0, description="Minimum rent"),
+    max_rent: Optional[float] = Query(None, ge=0, description="Minimum rent"),
+    min_square_feet: Optional[int] = Query(None, ge=0, description="Minimum square feet"),
+    max_square_feet: Optional[int] = Query(None, ge=0, description="Maximum square feet"),
+    pets_allowed: Optional[bool] = Query(None, description="Pets allowed filter"),
+    is_furnished: Optional[bool] = Query(None, description="Furnished filter"),
+    smoking_allowed: Optional[bool] = Query(None, description="Smoking allowed filter"),
+    year_built_min: Optional[int] = Query(None, ge=1800, le=2030, description="Minimum year built"),
+    year_built_max: Optional[int] = Query(None, ge=1800, le=2030, description="Maximum year built"),
+    parking_spaces_min: Optional[int] = Query(None, ge=0, description="Minimum parking spaces"),
+    db: Session = Depends(get_db)
+):
+    """Get count of search results with advanced filters"""
+    query_obj = db.query(Property).filter(Property.is_available == True)
+    
+    # Apply same filters as search_properties
+    if query:
+        search_filter = or_(
+            Property.title.ilike(f"%{query}%"),
+            Property.description.ilike(f"%{query}%"),
+            Property.address.ilike(f"%{query}%"),
+            Property.city.ilike(f"%{query}%"),
+            Property.state.ilike(f"%{query}%")
+        )
+        query_obj = query_obj.filter(search_filter)
+    
+    if city:
+        query_obj = query_obj.filter(Property.city.ilike(f"%{city}%"))
+    if state:
+        query_obj = query_obj.filter(Property.state.ilike(f"%{state}%"))
+    if property_type:
+        query_obj = query_obj.filter(Property.property_type == property_type)
+    if listing_type:
+        query_obj = query_obj.filter(Property.listing_type == listing_type)
+    if min_bedrooms is not None:
+        query_obj = query_obj.filter(Property.bedrooms >= min_bedrooms)
+    if max_bedrooms is not None:
+        query_obj = query_obj.filter(Property.bedrooms <= max_bedrooms)
+    if min_bathrooms is not None:
+        query_obj = query_obj.filter(Property.bathrooms >= min_bathrooms)
+    if max_bathrooms is not None:
+        query_obj = query_obj.filter(Property.bathrooms <= max_bathrooms)
+    if min_rent is not None:
+        query_obj = query_obj.filter(Property.rent_amount >= min_rent)
+    if max_rent is not None:
+        query_obj = query_obj.filter(Property.rent_amount <= max_rent)
+    if min_square_feet is not None:
+        query_obj = query_obj.filter(Property.square_feet >= min_square_feet)
+    if max_square_feet is not None:
+        query_obj = query_obj.filter(Property.square_feet <= max_square_feet)
+    if pets_allowed is not None:
+        query_obj = query_obj.filter(Property.pets_allowed == pets_allowed)
+    if is_furnished is not None:
+        query_obj = query_obj.filter(Property.is_furnished == is_furnished)
+    if smoking_allowed is not None:
+        query_obj = query_obj.filter(Property.smoking_allowed == smoking_allowed)
+    if year_built_min is not None:
+        query_obj = query_obj.filter(Property.year_built >= year_built_min)
+    if year_built_max is not None:
+        query_obj = query_obj.filter(Property.year_built <= year_built_max)
+    if parking_spaces_min is not None:
+        query_obj = query_obj.filter(Property.parking_spaces >= parking_spaces_min)
+    
+    total_count = query_obj.count()
+    return {"total_count": total_count}
 
 @router.get("/{property_id}", response_model=PropertyResponse)
 async def get_property(property_id: int, db: Session = Depends(get_db)):

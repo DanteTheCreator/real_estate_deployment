@@ -41,11 +41,8 @@ const ListingCard: React.FC<ListingCardProps> = ({ property }) => {
     e.stopPropagation(); // Prevent event bubbling
 
     if (!user) {
-      toast({
-        title: t('common.loginRequired'),
-        description: t('common.loginToSave'),
-        variant: "destructive",
-      });
+      // Open sign-in page in new tab instead of showing error
+      window.open('/auth', '_blank');
       return;
     }
 
@@ -73,10 +70,7 @@ const ListingCard: React.FC<ListingCardProps> = ({ property }) => {
   };
 
   const formatPrice = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
+    return `₾${amount.toLocaleString()}`;
   };
 
   const formatAddress = (property: Property) => {
