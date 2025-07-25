@@ -8,6 +8,7 @@ import { Property } from '@/types';
 import { minioService, propertyService } from '@/services';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import { useToast } from '@/hooks/use-toast';
 
 interface ListingCardProps {
@@ -18,6 +19,7 @@ const ListingCard: React.FC<ListingCardProps> = ({ property }) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { t } = useLanguage();
+  const { formatPrice } = useCurrency();
   const [isSaved, setIsSaved] = useState(false);
   const [savingProperty, setSavingProperty] = useState(false);
 
@@ -67,10 +69,6 @@ const ListingCard: React.FC<ListingCardProps> = ({ property }) => {
     } finally {
       setSavingProperty(false);
     }
-  };
-
-  const formatPrice = (amount: number) => {
-    return `₾${amount.toLocaleString()}`;
   };
 
   const formatAddress = (property: Property) => {
@@ -160,7 +158,7 @@ const ListingCard: React.FC<ListingCardProps> = ({ property }) => {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-xl font-bold text-gray-900">
-                  {formatPrice(property.rent_amount)}
+                  {formatPrice(property.rent_amount, property.rent_amount_usd, property.listing_type)}
                 </div>
                 <div className="text-sm text-gray-600">per month</div>
               </div>

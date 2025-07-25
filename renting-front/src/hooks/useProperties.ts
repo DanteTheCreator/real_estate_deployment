@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Property, SearchFilters, UsePropertiesReturn, UsePropertyReturn, UseFavoritesReturn } from '@/types';
 import { propertyService, userService } from '@/services';
 import { useAppContext } from '@/contexts/AppContext';
+import { useCurrency } from '@/contexts/CurrencyContext';
 
 export const useProperties = (): UsePropertiesReturn => {
   const [properties, setProperties] = useState<Property[]>([]);
@@ -13,15 +14,44 @@ export const useProperties = (): UsePropertiesReturn => {
   const [currentFilters, setCurrentFilters] = useState<SearchFilters | null>(null);
 
   const { addRecentSearch } = useAppContext();
+  const { currency } = useCurrency();
+
+  // Convert price filters based on current currency
+  const convertPriceFilters = useCallback((filters: SearchFilters): SearchFilters => {
+    const convertedFilters = { ...filters };
+    
+    // If user is searching in USD but backend expects GEL, convert the price ranges
+    if (currency === 'USD') {
+      // Convert USD price filters to GEL for backend filtering
+      if (convertedFilters.min_rent !== undefined) {
+        convertedFilters.min_rent = convertedFilters.min_rent * 2.71; // Convert USD to GEL
+      }
+      if (convertedFilters.max_rent !== undefined) {
+        convertedFilters.max_rent = convertedFilters.max_rent * 2.71; // Convert USD to GEL
+      }
+      // Also handle legacy price fields
+      if (convertedFilters.priceMin !== undefined) {
+        convertedFilters.priceMin = convertedFilters.priceMin * 2.71;
+      }
+      if (convertedFilters.priceMax !== undefined) {
+        convertedFilters.priceMax = convertedFilters.priceMax * 2.71;
+      }
+    }
+    
+    return convertedFilters;
+  }, [currency]);
 
   const searchProperties = useCallback(async (filters: SearchFilters, resetPage = true) => {
     setIsLoading(true);
     setError(null);
-    setCurrentFilters(filters);
+    
+    // Convert price filters based on current currency
+    const convertedFilters = convertPriceFilters(filters);
+    setCurrentFilters(convertedFilters);
 
     try {
       const pageToUse = resetPage ? 1 : currentPage;
-      const response = await propertyService.searchProperties(filters, pageToUse, 20);
+      const response = await propertyService.searchProperties(convertedFilters, pageToUse, 20);
       
       if (resetPage) {
         setProperties(response.data);
@@ -36,7 +66,7 @@ export const useProperties = (): UsePropertiesReturn => {
       
       // Add to recent searches only for new searches
       if (resetPage) {
-        addRecentSearch(filters);
+        addRecentSearch(convertedFilters);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to search properties');
@@ -46,7 +76,7 @@ export const useProperties = (): UsePropertiesReturn => {
     } finally {
       setIsLoading(false);
     }
-  }, [addRecentSearch, currentPage]);
+  }, [addRecentSearch, currentPage, convertPriceFilters]);
 
   const loadMore = useCallback(async () => {
     if (!currentFilters || currentPage >= totalPages || isLoading) return;
@@ -88,6 +118,9 @@ export const useProperties = (): UsePropertiesReturn => {
     if (!currentFilters) return;
     await searchProperties(currentFilters);
   }, [currentFilters, searchProperties]);
+
+  // Note: We don't refetch when currency changes because the backend returns both GEL and USD amounts
+  // The currency display is handled by the CurrencyContext.formatPrice() function in the UI components
 
   return {
     properties,

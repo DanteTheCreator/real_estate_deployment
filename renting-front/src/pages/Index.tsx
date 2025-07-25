@@ -47,22 +47,24 @@ const Index: React.FC = () => {
               <h2 className="text-2xl font-bold text-foreground">
                 {t('listings.availableProperties')}
               </h2>
-              {totalCount > 0 && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  {totalCount === 1 
-                    ? `1 property found` 
-                    : `${totalCount.toLocaleString()} properties available`
-                  }
-                  {totalPages > 1 && (
-                    <span className="ml-2">
-                      • Page {currentPage} of {totalPages}
-                    </span>
-                  )}
-                </p>
-              )}
               {!hasSearched && (
                 <p className="text-sm text-muted-foreground mt-1">
                   Loading properties...
+                </p>
+              )}
+            </div>
+            <div className="text-right">
+              {totalCount > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  {totalCount === 1 
+                    ? `1 property found` 
+                    : `${totalCount.toLocaleString()} search results`
+                  }
+                </p>
+              )}
+              {totalPages > 1 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Page {currentPage} of {totalPages}
                 </p>
               )}
             </div>
@@ -161,24 +163,6 @@ const Index: React.FC = () => {
                       </PaginationItem>
                     </PaginationContent>
                   </Pagination>
-                  
-                  {/* Pagination Info */}
-                  <div className="text-center text-sm text-muted-foreground mb-4">
-                    Showing {((currentPage - 1) * 20) + 1} to {Math.min(currentPage * 20, totalCount)} of {totalCount.toLocaleString()} properties
-                  </div>
-                  
-                  {/* Load More Button - Alternative to pagination for mobile */}
-                  {currentPage < totalPages && (
-                    <div className="text-center mb-6">
-                      <button
-                        onClick={() => goToPage(currentPage + 1)}
-                        disabled={isLoading}
-                        className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {isLoading ? 'Loading...' : 'Load More Properties'}
-                      </button>
-                    </div>
-                  )}
                 </div>
               )}
             </>

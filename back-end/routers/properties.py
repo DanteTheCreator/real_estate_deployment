@@ -77,6 +77,7 @@ async def search_properties(
     year_built_min: Optional[int] = Query(None, ge=1800, le=2030, description="Minimum year built"),
     year_built_max: Optional[int] = Query(None, ge=1800, le=2030, description="Maximum year built"),
     parking_spaces_min: Optional[int] = Query(None, ge=0, description="Minimum parking spaces"),
+    currency: Optional[str] = Query("GEL", description="Currency for price filtering (GEL or USD)"),
     sort_by: Optional[str] = Query("date", description="Sort by field"),
     sort_order: Optional[str] = Query("desc", description="Sort order (asc/desc)"),
     db: Session = Depends(get_db)
@@ -180,6 +181,7 @@ async def get_properties_count(
     max_bedrooms: Optional[int] = Query(None, ge=0),
     pets_allowed: Optional[bool] = None,
     is_furnished: Optional[bool] = None,
+    currency: Optional[str] = Query("GEL", description="Currency for price filtering (GEL or USD)"),
     db: Session = Depends(get_db)
 ):
     """Get count of available properties with filtering"""
@@ -192,10 +194,32 @@ async def get_properties_count(
         query = query.filter(Property.state.ilike(f"%{state}%"))
     if property_type:
         query = query.filter(Property.property_type == property_type)
-    if min_rent is not None:
-        query = query.filter(Property.rent_amount >= min_rent)
-    if max_rent is not None:
-        query = query.filter(Property.rent_amount <= max_rent)
+    
+    # Price filters - handle currency selection
+    if min_rent is not None or max_rent is not None:
+        if currency and currency.upper() == "USD":
+            # Filter by USD amount
+            if min_rent is not None:
+                query = query.filter(
+                    or_(
+                        Property.rent_amount_usd >= min_rent,
+                        and_(Property.rent_amount_usd.is_(None), Property.rent_amount >= min_rent * 2.7)
+                    )
+                )
+            if max_rent is not None:
+                query = query.filter(
+                    or_(
+                        Property.rent_amount_usd <= max_rent,
+                        and_(Property.rent_amount_usd.is_(None), Property.rent_amount <= max_rent * 2.7)
+                    )
+                )
+        else:
+            # Filter by GEL amount (default)
+            if min_rent is not None:
+                query = query.filter(Property.rent_amount >= min_rent)
+            if max_rent is not None:
+                query = query.filter(Property.rent_amount <= max_rent)
+    
     if min_bedrooms is not None:
         query = query.filter(Property.bedrooms >= min_bedrooms)
     if max_bedrooms is not None:
@@ -229,6 +253,7 @@ async def get_search_count(
     year_built_min: Optional[int] = Query(None, ge=1800, le=2030, description="Minimum year built"),
     year_built_max: Optional[int] = Query(None, ge=1800, le=2030, description="Maximum year built"),
     parking_spaces_min: Optional[int] = Query(None, ge=0, description="Minimum parking spaces"),
+    currency: Optional[str] = Query("GEL", description="Currency for price filtering (GEL or USD)"),
     db: Session = Depends(get_db)
 ):
     """Get count of search results with advanced filters"""
@@ -261,10 +286,31 @@ async def get_search_count(
         query_obj = query_obj.filter(Property.bathrooms >= min_bathrooms)
     if max_bathrooms is not None:
         query_obj = query_obj.filter(Property.bathrooms <= max_bathrooms)
-    if min_rent is not None:
-        query_obj = query_obj.filter(Property.rent_amount >= min_rent)
-    if max_rent is not None:
-        query_obj = query_obj.filter(Property.rent_amount <= max_rent)
+    
+    # Price filters - handle currency selection
+    if min_rent is not None or max_rent is not None:
+        if currency and currency.upper() == "USD":
+            # Filter by USD amount
+            if min_rent is not None:
+                query_obj = query_obj.filter(
+                    or_(
+                        Property.rent_amount_usd >= min_rent,
+                        and_(Property.rent_amount_usd.is_(None), Property.rent_amount >= min_rent * 2.7)
+                    )
+                )
+            if max_rent is not None:
+                query_obj = query_obj.filter(
+                    or_(
+                        Property.rent_amount_usd <= max_rent,
+                        and_(Property.rent_amount_usd.is_(None), Property.rent_amount <= max_rent * 2.7)
+                    )
+                )
+        else:
+            # Filter by GEL amount (default)
+            if min_rent is not None:
+                query_obj = query_obj.filter(Property.rent_amount >= min_rent)
+            if max_rent is not None:
+                query_obj = query_obj.filter(Property.rent_amount <= max_rent)
     if min_square_feet is not None:
         query_obj = query_obj.filter(Property.square_feet >= min_square_feet)
     if max_square_feet is not None:

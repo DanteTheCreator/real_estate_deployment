@@ -30,11 +30,13 @@ export interface Property {
   zip_code: string;
   country?: string;
   property_type: 'apartment' | 'house' | 'condo' | 'townhouse' | 'studio';
+  listing_type: 'rent' | 'sale' | 'lease' | 'daily' | 'mortgage';
   bedrooms: number;
   bathrooms: number;
   square_feet?: number | null;
   lot_size?: number | null;
   rent_amount: number;
+  rent_amount_usd?: number | null;
   security_deposit?: number | null;
   lease_duration?: number;
   available_date?: string | null;

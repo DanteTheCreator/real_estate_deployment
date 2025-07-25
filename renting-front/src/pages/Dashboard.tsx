@@ -12,11 +12,13 @@ import { Edit, Trash2, Eye, Heart, Settings, Plus, Loader2 } from 'lucide-react'
 import { dashboardService, MyListing, DashboardStats } from '@/services/dashboardService';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useCurrency } from '@/contexts/CurrencyContext';
 import { Property } from '@/types';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const { formatPrice } = useCurrency();
   const navigate = useNavigate();
   const [myListings, setMyListings] = useState<MyListing[]>([]);
   const [savedListings, setSavedListings] = useState<Property[]>([]);
@@ -187,7 +189,7 @@ const Dashboard: React.FC = () => {
                             <div className="flex-1">
                               <h3 className="text-lg font-semibold text-slate-800 mb-2 group-hover:text-blue-600 transition-colors">{listing.title}</h3>
                               <div className="flex items-center gap-4 text-sm text-slate-600">
-                                <span className="font-medium">₾{listing.rent_amount.toLocaleString()} {listing.currency}</span>
+                                <span className="font-medium">{formatPrice(listing.rent_amount, listing.rent_amount_usd, listing.listing_type)}</span>
                                 <Badge variant={listing.status === 'active' ? 'default' : 'secondary'}>
                                   {listing.status === 'active' ? t('common.active') : t('common.inactive')}
                                 </Badge>

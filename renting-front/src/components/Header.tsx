@@ -5,6 +5,7 @@ import { Plus, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { LanguageDropdown } from '@/components/LanguageDropdown';
+import { CurrencyDropdown } from '@/components/CurrencyDropdown';
 
 const Header: React.FC = () => {
   const navigate = useNavigate();
@@ -83,6 +84,7 @@ const Header: React.FC = () => {
               </Button>
             )}
             
+            <CurrencyDropdown />
             <LanguageDropdown />
 
             <Button 

@@ -12,6 +12,7 @@ import { Property } from '@/types';
 import { propertyService, contactService } from '@/services';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useCurrency } from '@/contexts/CurrencyContext';
 
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('en-US', {
@@ -26,6 +27,7 @@ const PropertyDetail: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { t } = useLanguage();
+  const { formatPrice, currency } = useCurrency();
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -172,7 +174,7 @@ I would like to schedule a viewing for the following property:
 
 Property: ${property.title}
 Address: ${property.address}, ${property.city}, ${property.state}
-Rent: ₾{property.rent_amount?.toLocaleString()}/month
+${property.listing_type === 'sale' ? 'Price' : 'Rent'}: ${formatPrice(property.rent_amount || 0, property.rent_amount_usd, property.listing_type)}
 Property URL: ${propertyUrl}
 
 Please contact me to arrange a convenient viewing time.
@@ -256,7 +258,7 @@ Thank you!`;
                     </div>
                     <div className="flex items-center space-x-4">
                       <span className="text-3xl font-bold text-blue-600">
-                        ₾{property.rent_amount?.toLocaleString()}/month
+                        {formatPrice(property.rent_amount || 0, property.rent_amount_usd, property.listing_type)}
                       </span>
                       <Badge variant="secondary" className="bg-green-100 text-green-800">
                         {property.is_available ? 'Available' : 'Not Available'}
@@ -347,7 +349,7 @@ Thank you!`;
                     </div>
                     <div className="flex items-center space-x-2">
                       <DollarSign className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm text-gray-600">Deposit: ₾{property.security_deposit ? property.security_deposit.toLocaleString() : (property.rent_amount * 2).toLocaleString()}</span>
+                      <span className="text-sm text-gray-600">Deposit: {formatPrice(property.security_deposit || (property.rent_amount * 2), property.rent_amount_usd ? (property.rent_amount_usd * 2) : undefined, 'sale')}</span>
                     </div>
                     {property.amenities && property.amenities.length > 0 && (
                       <div className="md:col-span-2">
@@ -428,11 +430,11 @@ Thank you!`;
                   <div className="space-y-3">
                     <div className="text-sm text-gray-600 p-3 bg-gray-50 rounded">
                       <div className="font-medium">Modern 2BR Apartment</div>
-                      <div>Downtown • ₾2,800/month</div>
+                      <div>Downtown • {formatPrice(2800, 1000, 'rent')}</div>
                     </div>
                     <div className="text-sm text-gray-600 p-3 bg-gray-50 rounded">
                       <div className="font-medium">Luxury Studio</div>
-                      <div>Midtown • ₾2,200/month</div>
+                      <div>Midtown • {formatPrice(2200, 800, 'rent')}</div>
                     </div>
                   </div>
                   <Button variant="outline" className="w-full mt-4">

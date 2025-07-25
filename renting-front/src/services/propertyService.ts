@@ -36,6 +36,9 @@ export const propertyService = {
     if (filters.pets_allowed !== undefined) queryParams.pets_allowed = filters.pets_allowed;
     if (filters.is_furnished !== undefined) queryParams.is_furnished = filters.is_furnished;
     
+    // Currency parameter for filtering
+    if (filters.currency) queryParams.currency = filters.currency;
+    
     // Additional filters for area search
     if (filters.areaMin) queryParams.min_square_feet = filters.areaMin;
     if (filters.areaMax) queryParams.max_square_feet = filters.areaMax;

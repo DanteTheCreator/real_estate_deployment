@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { AppProvider } from "@/contexts/AppContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import PropertyDetail from "./pages/PropertyDetail";
@@ -26,65 +27,67 @@ const App = () => (
   <ThemeProvider defaultTheme="light">
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
-        <AuthProvider>
-          <AppProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/listings" element={<Navigate to="/" replace />} />
-                <Route path="/property/:id" element={<PropertyDetail />} />
-                <Route 
-                  path="/post-ad" 
-                  element={
-                    <ProtectedRoute>
-                      <PostAd />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/edit-property/:id" 
-                  element={
-                    <ProtectedRoute>
-                      <EditProperty />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/dashboard" 
-                  element={
-                    <ProtectedRoute>
-                      <Dashboard />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/auth" 
-                  element={
-                    <ProtectedRoute requireAuth={false}>
-                      <Auth />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/forgot-password" 
-                  element={
-                    <ProtectedRoute requireAuth={false}>
-                      <ForgotPassword />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                <Route path="/terms-of-service" element={<TermsOfService />} />
-                <Route path="/cookie-policy" element={<CookiePolicy />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </TooltipProvider>
-        </AppProvider>
-      </AuthProvider>
+        <CurrencyProvider>
+          <AuthProvider>
+            <AppProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/listings" element={<Navigate to="/" replace />} />
+                  <Route path="/property/:id" element={<PropertyDetail />} />
+                  <Route 
+                    path="/post-ad" 
+                    element={
+                      <ProtectedRoute>
+                        <PostAd />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/edit-property/:id" 
+                    element={
+                      <ProtectedRoute>
+                        <EditProperty />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/dashboard" 
+                    element={
+                      <ProtectedRoute>
+                        <Dashboard />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/auth" 
+                    element={
+                      <ProtectedRoute requireAuth={false}>
+                        <Auth />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/forgot-password" 
+                    element={
+                      <ProtectedRoute requireAuth={false}>
+                        <ForgotPassword />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                  <Route path="/terms-of-service" element={<TermsOfService />} />
+                  <Route path="/cookie-policy" element={<CookiePolicy />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </TooltipProvider>
+          </AppProvider>
+        </AuthProvider>
+        </CurrencyProvider>
       </LanguageProvider>
     </QueryClientProvider>
   </ThemeProvider>

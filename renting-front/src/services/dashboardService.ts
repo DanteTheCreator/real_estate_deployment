@@ -12,6 +12,8 @@ export interface MyListing {
   id: number;
   title: string;
   rent_amount: number;
+  rent_amount_usd?: number;
+  listing_type?: string;
   currency: string;
   status: 'active' | 'draft' | 'inactive' | 'sold' | 'rented';
   views: number;
