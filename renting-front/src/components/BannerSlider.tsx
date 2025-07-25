@@ -7,20 +7,20 @@ const carouselImages = [
   {
     url: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1973&q=80',
     alt: 'Modern living room with contemporary furniture',
-    title: 'Luxury Living Spaces',
-    subtitle: 'Experience comfort and style'
+    title: 'One Property, One Listing',
+    subtitle: 'No duplicates. No confusion. Just comfort.'
   },
   {
     url: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
     alt: 'Beautiful house exterior with garden',
-    title: 'Dream Homes Await',
-    subtitle: 'Find your perfect property'
+    title: 'Simplified Search Experience',
+    subtitle: 'Modern design meets user comfort'
   },
   {
     url: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2064&q=80',
     alt: 'Modern apartment with city view',
-    title: 'City Living',
-    subtitle: 'Urban apartments with stunning views'
+    title: 'Clean. Simple. Effective.',
+    subtitle: 'Find your perfect home without the clutter'
   }
 ];
 

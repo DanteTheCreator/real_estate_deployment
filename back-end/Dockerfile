@@ -1,4 +1,4 @@
-# Multi-stage production build for Scraper
+# Multi-stage production build for FastAPI backend
 FROM python:3.11-slim as builder
 
 # Set build arguments
@@ -20,15 +20,15 @@ RUN apt-get update && apt-get install -y \
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Copy and install requirements from backend
-COPY ../back-end/requirements.txt /tmp/
+# Copy and install requirements
+COPY requirements.txt /tmp/
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 # Production stage
 FROM python:3.11-slim
 
 # Create non-root user
-RUN groupadd -r scraper && useradd -r -g scraper -s /bin/false scraper
+RUN groupadd -r comfyrent && useradd -r -g comfyrent -s /bin/false comfyrent
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -47,24 +47,31 @@ COPY --from=builder /opt/venv /opt/venv
 # Set working directory
 WORKDIR /app
 
-# Create logs directory for app logging
-RUN mkdir -p /app/logs
 
-# Copy backend files needed for scraper
-COPY --chown=scraper:scraper ../back-end/enhanced_scraper_with_db.py .
-COPY --chown=scraper:scraper ../back-end/schemas.py .
-COPY --chown=scraper:scraper ../back-end/database.py .
-COPY --chown=scraper:scraper ../back-end/config.py .
+# Create necessary directories
+RUN mkdir -p /app/logs /app/data/property_images /app/data/reports
+
+# Copy application code
+COPY --chown=comfyrent:comfyrent . .
+
+# Remove development files
+RUN rm -rf tests/ docs/ *.md .env* requirements-dev.txt
+
+# Make scraper executable
+RUN chmod +x scraper/advanced_myhome_scraper.py
 
 # Set proper permissions
-RUN chown -R scraper:scraper /app
+RUN chown -R comfyrent:comfyrent /app
 
 # Switch to non-root user
-USER scraper
+USER comfyrent
 
 # Health check
-HEALTHCHECK --interval=60s --timeout=30s --start-period=30s --retries=2 \
-    CMD pgrep -f "python.*enhanced_scraper" || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
 
-# Run scraper
-CMD ["python", "enhanced_scraper_with_db.py"]
+# Expose port
+EXPOSE 8000
+
+# Run production server with Gunicorn
+CMD ["gunicorn", "app:app", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000", "--max-requests", "1000", "--max-requests-jitter", "50", "--preload", "--access-logfile", "-", "--error-logfile", "-"]

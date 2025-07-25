@@ -21,7 +21,7 @@ interface PropertyFormData {
   city: string;
   state: string;
   zip_code: string;
-  property_type: 'apartment' | 'house' | 'condo' | 'townhouse' | 'studio';
+  property_type: 'apartment' | 'house' | 'country_house' | 'land_plot' | 'commercial' | 'hotel' | 'studio';
   bedrooms: number;
   bathrooms: number;
   square_feet: number;
@@ -265,8 +265,10 @@ const EditProperty: React.FC = () => {
                     <SelectContent>
                       <SelectItem value="apartment">Apartment</SelectItem>
                       <SelectItem value="house">House</SelectItem>
-                      <SelectItem value="condo">Condo</SelectItem>
-                      <SelectItem value="townhouse">Townhouse</SelectItem>
+                      <SelectItem value="country_house">Country House</SelectItem>
+                      <SelectItem value="land_plot">Land Plot</SelectItem>
+                      <SelectItem value="commercial">Commercial</SelectItem>
+                      <SelectItem value="hotel">Hotel</SelectItem>
                       <SelectItem value="studio">Studio</SelectItem>
                     </SelectContent>
                   </Select>

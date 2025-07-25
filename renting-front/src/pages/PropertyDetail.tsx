@@ -13,6 +13,7 @@ import { propertyService, contactService } from '@/services';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
+import { getLocalizedTitle, getLocalizedDescription, getLocalizedProperty } from '@/lib/multilingual';
 
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('en-US', {
@@ -26,7 +27,7 @@ const PropertyDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const { toast } = useToast();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { formatPrice, currency } = useCurrency();
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
@@ -34,6 +35,9 @@ const PropertyDetail: React.FC = () => {
   const [isSaved, setIsSaved] = useState(false);
   const [savingProperty, setSavingProperty] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
+
+  // Get localized property data
+  const localizedProperty = property ? getLocalizedProperty(property, language) : null;
 
   useEffect(() => {
     const fetchProperty = async () => {
@@ -88,7 +92,7 @@ const PropertyDetail: React.FC = () => {
     try {
       setSavingProperty(true);
       
-      const response = await propertyService.toggleSaveProperty(property.id.toString());
+      const response = await propertyService.toggleSaveProperty(localizedProperty.id.toString());
       const wasSaved = isSaved;
       setIsSaved(!wasSaved);
       
@@ -109,13 +113,13 @@ const PropertyDetail: React.FC = () => {
   };
 
   const handleShareProperty = async () => {
-    if (!property) return;
+    if (!localizedProperty) return;
 
     try {
       const success = await contactService.shareProperty(
-        property.id.toString(),
-        property.title,
-        property.price
+        localizedProperty.id.toString(),
+        localizedProperty.title,
+        localizedProperty.rent_amount
       );
 
       if (success) {
@@ -125,7 +129,7 @@ const PropertyDetail: React.FC = () => {
         });
       } else {
         // Fallback: show the link in a toast for manual copying
-        const shareUrl = contactService.generateShareLink(property.id.toString(), property.title);
+        const shareUrl = contactService.generateShareLink(localizedProperty.id.toString(), localizedProperty.title);
         toast({
           title: "Share this property",
           description: shareUrl,
@@ -147,34 +151,72 @@ const PropertyDetail: React.FC = () => {
   };
 
   const handleAddressClick = () => {
-    if (!property) return;
+    if (!localizedProperty) return;
 
-    // Construct the full address for Google Maps search
-    const fullAddress = [
-      property.address,
-      property.city,
-      property.state
-    ].filter(Boolean).join(', ');
-
-    // Create Google Maps search URL
-    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`;
+    // First try to open with Google Maps
+    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(localizedProperty.address)}`;
     
-    // Open in new tab
-    window.open(googleMapsUrl, '_blank');
+    try {
+      window.open(googleMapsUrl, '_blank');
+    } catch (error) {
+      console.error('Could not open Google Maps:', error);
+      
+      // Fallback: copy address to clipboard
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(localizedProperty.address).then(() => {
+          toast({
+            title: "Address Copied",
+            description: "The property address has been copied to your clipboard.",
+          });
+        }).catch(() => {
+          // Final fallback: show address in toast
+          toast({
+            title: "Property Address",
+            description: localizedProperty.address,
+            duration: 5000,
+          });
+        });
+      } else {
+        // Show address in toast if clipboard is not available
+        toast({
+          title: "Property Address",
+          description: localizedProperty.address,
+          duration: 5000,
+        });
+      }
+    }
   };
 
-  const handleScheduleViewing = () => {
+  const handleContactOwner = () => {
+    if (!localizedProperty) return;
+    
+    const subject = `Schedule Property Viewing - ${localizedProperty.title}`;
+    const body = `Hello,
+
+I am interested in viewing the following property:
+
+Property: ${localizedProperty.title}
+Address: ${localizedProperty.address}
+Rent: ${formatPrice(localizedProperty.rent_amount)}
+
+Please let me know your availability for a viewing.
+
+Thank you!`;
+    
+    const emailUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = emailUrl;
+  };  const handleScheduleViewing = () => {
     if (!property) return;
     
     const propertyUrl = window.location.href;
-    const subject = `Schedule Property Viewing - ${property.title}`;
+    const subject = `Schedule Property Viewing - ${localizedProperty.title}`;
     const body = `Hello ComfyRent Team,
 
 I would like to schedule a viewing for the following property:
 
-Property: ${property.title}
-Address: ${property.address}, ${property.city}, ${property.state}
-${property.listing_type === 'sale' ? 'Price' : 'Rent'}: ${formatPrice(property.rent_amount || 0, property.rent_amount_usd, property.listing_type)}
+Property: ${localizedProperty.title}
+Address: ${localizedProperty.address}, ${localizedProperty.city}, ${localizedProperty.state}
+${localizedProperty.listing_type === 'sale' ? 'Price' : 'Rent'}: ${formatPrice(localizedProperty.rent_amount || 0, localizedProperty.rent_amount_usd, localizedProperty.listing_type)}
 Property URL: ${propertyUrl}
 
 Please contact me to arrange a convenient viewing time.
@@ -230,7 +272,7 @@ Thank you!`;
           <ChevronRight className="h-4 w-4" />
           <Link to="/listings" className="hover:text-gray-700">Listings</Link>
           <ChevronRight className="h-4 w-4" />
-          <span className="text-gray-900">{property.title}</span>
+          <span className="text-gray-900">{localizedProperty.title}</span>
         </nav>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -238,7 +280,7 @@ Thank you!`;
           <div className="lg:col-span-2">
             {/* Property Gallery */}
             <div className="mb-8">
-              <PropertyGallery images={property.images || []} title={property.title} />
+              <PropertyGallery images={localizedProperty.images || []} title={localizedProperty.title} />
             </div>
 
             {/* Property Info */}
@@ -247,21 +289,21 @@ Thank you!`;
               <div>
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">{property.title}</h1>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-2">{localizedProperty.title}</h1>
                     <div 
                       className="flex items-center text-gray-600 mb-3 cursor-pointer hover:text-blue-600 transition-colors group" 
                       onClick={handleAddressClick}
                       title="Click to view on Google Maps"
                     >
                       <MapPin className="h-4 w-4 mr-1 group-hover:text-blue-600" />
-                      <span className="underline-offset-2 group-hover:underline">{property.address}, {property.city}</span>
+                      <span className="underline-offset-2 group-hover:underline">{localizedProperty.address}, {localizedProperty.city}</span>
                     </div>
                     <div className="flex items-center space-x-4">
                       <span className="text-3xl font-bold text-blue-600">
-                        {formatPrice(property.rent_amount || 0, property.rent_amount_usd, property.listing_type)}
+                        {formatPrice(localizedProperty.rent_amount || 0, localizedProperty.rent_amount_usd, localizedProperty.listing_type)}
                       </span>
                       <Badge variant="secondary" className="bg-green-100 text-green-800">
-                        {property.is_available ? 'Available' : 'Not Available'}
+                        {localizedProperty.is_available ? 'Available' : 'Not Available'}
                       </Badge>
                     </div>
                   </div>
@@ -333,7 +375,7 @@ Thank you!`;
                 <CardContent className="p-6">
                   <h3 className="text-lg font-semibold mb-4">Description</h3>
                   <p className="text-gray-700 leading-relaxed">
-                    {property.description || 'No description available for this property.'}
+                    {localizedProperty.description || 'No description available for this property.'}
                   </p>
                 </CardContent>
               </Card>
@@ -448,12 +490,12 @@ Thank you!`;
       </div>
       
       {/* Report Property Dialog */}
-      {property && (
+      {localizedProperty && (
         <ReportPropertyDialog
           isOpen={showReportDialog}
           onClose={() => setShowReportDialog(false)}
-          propertyId={property.id.toString()}
-          propertyTitle={property.title}
+          propertyId={localizedProperty.id.toString()}
+          propertyTitle={localizedProperty.title}
         />
       )}
     </AppLayout>

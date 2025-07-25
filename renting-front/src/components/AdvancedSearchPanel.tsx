@@ -97,19 +97,21 @@ const AdvancedSearchPanel: React.FC<AdvancedSearchPanelProps> = ({ onSearch }) =
   });
 
   const dealTypes = [
-    { value: 'sale', label: 'For Sale' },
-    { value: 'rent', label: 'For Rent' },
-    { value: 'daily', label: 'Daily Rent' },
-    { value: 'mortgage', label: 'Leasehold/Mortgage' }
+    { value: 'sale', label: 'For sale' },
+    { value: 'rent', label: 'For rent' },
+    { value: 'leasehold_mortgage', label: 'Leasehold mortgage' },
+    { value: 'lease', label: 'For lease' },
+    { value: 'daily_rent', label: 'Daily rent' }
   ];
 
   const propertyTypes = [
     { value: 'apartment', label: 'Apartment' },
     { value: 'house', label: 'House' },
+    { value: 'country_house', label: 'Country House' },
+    { value: 'land_plot', label: 'Land Plot' },
     { value: 'commercial', label: 'Commercial' },
-    { value: 'land', label: 'Land' },
-    { value: 'villa', label: 'Villa' },
-    { value: 'office', label: 'Office' }
+    { value: 'hotel', label: 'Hotel' },
+    { value: 'studio', label: 'Studio' }
   ];
 
   const handleFilterChange = (key: keyof FilterState, value: string | boolean | number[]) => {

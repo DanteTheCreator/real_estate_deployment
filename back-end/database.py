@@ -57,8 +57,12 @@ class Property(Base):
     __tablename__ = "properties"
     
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    title: Mapped[str] = mapped_column(String(255))
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    title: Mapped[str] = mapped_column(String(255))  # Georgian title (default)
+    title_en: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)  # English title
+    title_ru: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)  # Russian title
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # Georgian description (default)
+    description_en: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # English description
+    description_ru: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # Russian description
     address: Mapped[str] = mapped_column(String(500))
     city: Mapped[str] = mapped_column(String(100))
     state: Mapped[str] = mapped_column(String(100))
@@ -117,8 +121,12 @@ class Amenity(Base):
     __tablename__ = "amenities"
     
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    name: Mapped[str] = mapped_column(String(100), unique=True)
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    name: Mapped[str] = mapped_column(String(100), unique=True)  # Georgian name (default)
+    name_en: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)  # English name
+    name_ru: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)  # Russian name
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # Georgian description (default)
+    description_en: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # English description
+    description_ru: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # Russian description
     icon: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)  # Icon name for frontend
     category: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)  # e.g., "utilities", "recreation", "appliances"
     
@@ -142,7 +150,9 @@ class Parameter(Base):
     svg_file_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     background_color: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     parameter_type: Mapped[str] = mapped_column(String(50))  # 'parameter', 'feature', 'furniture-equipment', 'label'
-    display_name: Mapped[str] = mapped_column(String(200))
+    display_name: Mapped[str] = mapped_column(String(200))  # Georgian display name (default)
+    display_name_en: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)  # English display name
+    display_name_ru: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)  # Russian display name
     
     # Relationships
     property_parameters: Mapped[List["PropertyParameter"]] = relationship("PropertyParameter", back_populates="parameter")

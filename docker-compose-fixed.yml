@@ -117,7 +117,7 @@ services:
       timeout: 10s
       retries: 3
 
-  # High-Volume Scraper Service (optimized for 500k+ listings)
+  # Scraper Service (runs every 6 hours)
   scraper:
     build:
       context: ./back-end
@@ -140,15 +140,16 @@ services:
       - comfyrent-network
     restart: unless-stopped
     volumes:
+      - scraper_data:/app/data
       - scraper_logs:/app/logs
     command: |
       sh -c "
-        echo 'Starting ULTRA-HIGH-SPEED MyHome.ge scraper for 500k properties...';
+        echo 'Starting MyHome.ge scraper service...';
         while true; do
-          echo '[$(date)] Running ultra-fast concurrent scrape (10 pages parallel, 200 props/page)...';
-          cd /app && PYTHONPATH=/app python scraper/advanced_myhome_scraper.py --mode incremental --max-pages 25000 --no-reports --fast-mode;
-          echo '[$(date)] Ultra-fast batch completed. Waiting 0.1 seconds before next batch...';
-          sleep 0.1;
+          echo '[$(date)] Running incremental scrape...';
+          python /app/scraper/advanced_myhome_scraper.py --mode incremental --max-properties 2000 --report-format json;
+          echo '[$(date)] Scrape completed. Sleeping for 6 hours...';
+          sleep 21600;
         done
       "
 

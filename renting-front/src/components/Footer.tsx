@@ -21,7 +21,7 @@ const Footer: React.FC = () => {
               />
             </div>
             <p className="text-muted-foreground text-sm mb-4">
-              We guarantee a single listing per property for your searching comfort
+              Experience stress-free property searching with our modern platform. One listing per property guaranteed - because your time matters.
             </p>
             <div className="flex space-x-3">
               <Button variant="ghost" size="icon" className="h-8 w-8">

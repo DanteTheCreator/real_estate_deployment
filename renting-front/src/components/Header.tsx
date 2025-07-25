@@ -92,7 +92,7 @@ const Header: React.FC = () => {
               onClick={handlePostAdClick}
             >
               <Plus className="w-4 h-4 mr-2" />
-              {t('header.publishAd')}
+              {t('header.listProperty')}
             </Button>
           </div>
         </div>

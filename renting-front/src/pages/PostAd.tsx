@@ -130,7 +130,10 @@ const PostAd: React.FC = () => {
   return (
     <AppLayout>
       <div className="max-w-4xl mx-auto p-6">
-        <h1 className="text-3xl font-bold text-slate-800 mb-6">Post Your Property</h1>
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-slate-800 mb-2">List Your Property</h1>
+          <p className="text-lg text-slate-600">Join our platform where each property appears only once - giving you maximum visibility without competition from duplicate listings.</p>
+        </div>
         
         <form onSubmit={handleSubmit} className="space-y-6">
           <Card>

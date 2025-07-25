@@ -1,0 +1,16 @@
+curl 'https://api-statements.tnet.ge/v1/statements?currency_id=1&page=1' \
+  -H 'accept: application/json, text/plain, */*' \
+  -H 'accept-language: en-US,en;q=0.9,ka;q=0.8,und;q=0.7' \
+  -H 'global-authorization;' \
+  -H 'locale: en' \
+  -H 'origin: https://www.myhome.ge' \
+  -H 'priority: u=1, i' \
+  -H 'referer: https://www.myhome.ge/' \
+  -H 'sec-ch-ua: "Not)A;Brand";v="8", "Chromium";v="138", "Google Chrome";v="138"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "macOS"' \
+  -H 'sec-fetch-dest: empty' \
+  -H 'sec-fetch-mode: cors' \
+  -H 'sec-fetch-site: cross-site' \
+  -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36' \
+  -H 'x-website-key: myhome'

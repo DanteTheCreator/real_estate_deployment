@@ -4,6 +4,7 @@ import { ListingGrid } from '@/components/ListingGrid';
 import { useProperties } from '@/hooks/useProperties';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SearchFilters } from '@/types';
+import { propertyService } from '@/services';
 import { Loader2 } from 'lucide-react';
 import {
   Pagination,
@@ -19,6 +20,21 @@ const Index: React.FC = () => {
   const { searchProperties, properties, isLoading, error, totalCount, currentPage, totalPages, goToPage } = useProperties();
   const { t } = useLanguage();
   const [hasSearched, setHasSearched] = useState(false);
+  const [totalAvailableProperties, setTotalAvailableProperties] = useState<number | null>(null);
+
+  // Load total available properties count
+  useEffect(() => {
+    const loadTotalCount = async () => {
+      try {
+        const response = await propertyService.getTotalPropertiesCount();
+        setTotalAvailableProperties(response.total_count);
+      } catch (error) {
+        console.error('Failed to load total properties count:', error);
+      }
+    };
+    
+    loadTotalCount();
+  }, []);
 
   // Load initial properties when component mounts
   useEffect(() => {
@@ -44,9 +60,14 @@ const Index: React.FC = () => {
           {/* Results Header */}
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-foreground">
-                {t('listings.availableProperties')}
-              </h2>
+              <h1 className="text-3xl font-bold text-foreground mb-2">
+                Discover Your Perfect Home
+              </h1>
+              {totalAvailableProperties !== null && (
+                <p className="text-sm text-muted-foreground">
+                  Explore {totalAvailableProperties.toLocaleString()} unique properties
+                </p>
+              )}
               {!hasSearched && (
                 <p className="text-sm text-muted-foreground mt-1">
                   Loading properties...
@@ -171,7 +192,10 @@ const Index: React.FC = () => {
           {/* No Results */}
           {!isLoading && !error && properties.length === 0 && hasSearched && (
             <div className="text-center py-12">
-              <p className="text-muted-foreground text-lg">{t('listings.noProperties')}</p>
+              <h3 className="text-xl font-semibold text-muted-foreground mb-2">
+                No properties match your search
+              </h3>
+              <p className="text-muted-foreground text-lg mb-2">{t('listings.noProperties')}</p>
               <p className="text-sm text-muted-foreground mt-2 mb-6">
                 {t('listings.adjustFilters')}
               </p>
@@ -182,7 +206,7 @@ const Index: React.FC = () => {
                 }}
                 className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
               >
-                Show All Properties
+                Browse All Properties
               </button>
             </div>
           )}

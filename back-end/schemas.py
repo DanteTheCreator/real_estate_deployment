@@ -11,16 +11,18 @@ class UserRole(str, Enum):
 class PropertyType(str, Enum):
     APARTMENT = "apartment"
     HOUSE = "house"
-    CONDO = "condo"
-    TOWNHOUSE = "townhouse"
+    COUNTRY_HOUSE = "country_house"
+    LAND_PLOT = "land_plot"
+    COMMERCIAL = "commercial"
+    HOTEL = "hotel"
     STUDIO = "studio"
 
 class ListingType(str, Enum):
     RENT = "rent"
     SALE = "sale"
     LEASE = "lease"
-    DAILY = "daily"
-    MORTGAGE = "mortgage"
+    DAILY_RENT = "daily_rent"
+    LEASEHOLD_MORTGAGE = "leasehold_mortgage"
 
 class ApplicationStatus(str, Enum):
     PENDING = "pending"
@@ -64,8 +66,12 @@ class Token(BaseModel):
 
 # Amenity schemas
 class AmenityBase(BaseModel):
-    name: str = Field(..., min_length=1, max_length=100)
-    description: Optional[str] = None
+    name: str = Field(..., min_length=1, max_length=100)  # Georgian name (default)
+    name_en: Optional[str] = Field(None, max_length=100)  # English name
+    name_ru: Optional[str] = Field(None, max_length=100)  # Russian name
+    description: Optional[str] = None  # Georgian description (default)
+    description_en: Optional[str] = None  # English description
+    description_ru: Optional[str] = None  # Russian description
     icon: Optional[str] = Field(None, max_length=50)
     category: Optional[str] = Field(None, max_length=50)
 
@@ -103,8 +109,12 @@ class PropertyImageResponse(PropertyImageBase):
 
 # Property schemas
 class PropertyBase(BaseModel):
-    title: str = Field(..., max_length=255)
-    description: Optional[str] = None
+    title: str = Field(..., max_length=255)  # Georgian title (default)
+    title_en: Optional[str] = Field(None, max_length=255)  # English title
+    title_ru: Optional[str] = Field(None, max_length=255)  # Russian title
+    description: Optional[str] = None  # Georgian description (default)
+    description_en: Optional[str] = None  # English description
+    description_ru: Optional[str] = None  # Russian description
     address: str = Field(..., max_length=500)
     city: str = Field(..., max_length=100)
     state: str = Field(..., max_length=100)
@@ -144,7 +154,11 @@ class PropertyCreate(PropertyBase):
 
 class PropertyUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=1, max_length=255)
+    title_en: Optional[str] = Field(None, max_length=255)
+    title_ru: Optional[str] = Field(None, max_length=255)
     description: Optional[str] = None
+    description_en: Optional[str] = None
+    description_ru: Optional[str] = None
     address: Optional[str] = Field(None, min_length=1, max_length=500)
     city: Optional[str] = Field(None, min_length=1, max_length=100)
     state: Optional[str] = Field(None, min_length=1, max_length=100)
@@ -182,7 +196,11 @@ class PropertyResponse(PropertyBase):
 class PropertyListResponse(BaseModel):
     id: int
     title: str
+    title_en: Optional[str] = None
+    title_ru: Optional[str] = None
     description: Optional[str] = None
+    description_en: Optional[str] = None
+    description_ru: Optional[str] = None
     address: str
     city: str
     state: str

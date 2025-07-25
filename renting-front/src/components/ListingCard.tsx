@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { useToast } from '@/hooks/use-toast';
+import { getLocalizedProperty } from '@/lib/multilingual';
 
 interface ListingCardProps {
   property: Property;
@@ -18,10 +19,13 @@ interface ListingCardProps {
 const ListingCard: React.FC<ListingCardProps> = ({ property }) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { formatPrice } = useCurrency();
   const [isSaved, setIsSaved] = useState(false);
   const [savingProperty, setSavingProperty] = useState(false);
+
+  // Get localized property data
+  const localizedProperty = getLocalizedProperty(property, language);
 
   useEffect(() => {
     const checkSavedStatus = async () => {
@@ -82,35 +86,45 @@ const ListingCard: React.FC<ListingCardProps> = ({ property }) => {
           <div className="aspect-[4/3] bg-gray-200 rounded-t-lg overflow-hidden">
             <img
               src={minioService.getImageUrl(minioService.getPrimaryImage(property.images))}
-              alt={property.title}
+              alt={localizedProperty.title}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             />
           </div>
           
           <div className="absolute top-3 left-3 flex gap-2">
-            {property.property_type === 'studio' && (
-              <Badge variant="secondary" className="bg-blue-600 text-white">
-                Studio
-              </Badge>
-            )}
             {property.property_type === 'apartment' && (
-              <Badge variant="secondary" className="bg-green-600 text-white">
+              <Badge variant="secondary" className="bg-blue-600 text-white">
                 Apartment
               </Badge>
             )}
             {property.property_type === 'house' && (
-              <Badge variant="secondary" className="bg-purple-600 text-white">
+              <Badge variant="secondary" className="bg-green-600 text-white">
                 House
               </Badge>
             )}
-            {property.property_type === 'condo' && (
-              <Badge variant="secondary" className="bg-orange-600 text-white">
-                Condo
+            {property.property_type === 'country_house' && (
+              <Badge variant="secondary" className="bg-purple-600 text-white">
+                Country House
               </Badge>
             )}
-            {property.property_type === 'townhouse' && (
+            {property.property_type === 'land_plot' && (
+              <Badge variant="secondary" className="bg-orange-600 text-white">
+                Land Plot
+              </Badge>
+            )}
+            {property.property_type === 'commercial' && (
               <Badge variant="secondary" className="bg-indigo-600 text-white">
-                Townhouse
+                Commercial
+              </Badge>
+            )}
+            {property.property_type === 'hotel' && (
+              <Badge variant="secondary" className="bg-red-600 text-white">
+                Hotel
+              </Badge>
+            )}
+            {property.property_type === 'studio' && (
+              <Badge variant="secondary" className="bg-pink-600 text-white">
+                Studio
               </Badge>
             )}
           </div>
@@ -134,7 +148,7 @@ const ListingCard: React.FC<ListingCardProps> = ({ property }) => {
           <div className="space-y-3">
             <div>
               <h3 className="font-semibold text-lg line-clamp-2 group-hover:text-blue-600 transition-colors">
-                {property.title}
+                {localizedProperty.title}
               </h3>
               <div className="flex items-center text-sm text-gray-600 mt-1">
                 <MapPin className="h-4 w-4 mr-1" />
@@ -160,7 +174,6 @@ const ListingCard: React.FC<ListingCardProps> = ({ property }) => {
                 <div className="text-xl font-bold text-gray-900">
                   {formatPrice(property.rent_amount, property.rent_amount_usd, property.listing_type)}
                 </div>
-                <div className="text-sm text-gray-600">per month</div>
               </div>
               
               <Badge 

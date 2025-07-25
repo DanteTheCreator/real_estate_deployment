@@ -21,10 +21,8 @@ const translations = {
     'header.dashboard': 'Dashboard',
     'header.logout': 'Log Out',
     'header.login': 'Log In',
-    'header.publishAd': 'Publish an ad',
-    'header.welcome': 'Welcome',
-    'header.login': 'Log In',
-    'header.publishAd': 'Publish an ad',
+    'header.listProperty': 'List Property',
+    'header.publishAd': 'List Property',
     'header.welcome': 'Welcome',
     
     // Dashboard
@@ -34,8 +32,8 @@ const translations = {
     'dashboard.saved': 'Saved',
     'dashboard.analytics': 'Analytics',
     'dashboard.settings': 'Settings',
-    'dashboard.noListings': 'No listings found.',
-    'dashboard.createFirst': 'Start by creating your first property listing!',
+    'dashboard.noListings': 'No listings yet.',
+    'dashboard.createFirst': 'Create your first property listing and enjoy our duplicate-free platform!',
     'dashboard.noSaved': 'No saved properties yet.',
     'dashboard.browseSaved': 'Browse properties and save your favorites to see them here.',
     'dashboard.analyticsTitle': 'Analytics Overview',
@@ -191,8 +189,8 @@ const translations = {
     
     // Listings
     'listings.availableProperties': 'Available Properties',
-    'listings.noProperties': 'No properties found matching your criteria.',
-    'listings.adjustFilters': 'Try adjusting your search filters.',
+    'listings.noProperties': 'No properties found matching your search criteria.',
+    'listings.adjustFilters': 'Try refining your filters or browse all available properties.',
     
     // Property Details
     'property.details': 'Property Details',

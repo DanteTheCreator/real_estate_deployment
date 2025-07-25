@@ -22,15 +22,19 @@ export interface AuthState {
 // Property types - Updated to match FastAPI backend
 export interface Property {
   id: number; // Backend uses integer ID
-  title: string;
-  description?: string | null;
+  title: string;  // Georgian title (default)
+  title_en?: string | null;  // English title
+  title_ru?: string | null;  // Russian title
+  description?: string | null;  // Georgian description (default)
+  description_en?: string | null;  // English description
+  description_ru?: string | null;  // Russian description
   address: string;
   city: string;
   state: string;
   zip_code: string;
   country?: string;
-  property_type: 'apartment' | 'house' | 'condo' | 'townhouse' | 'studio';
-  listing_type: 'rent' | 'sale' | 'lease' | 'daily' | 'mortgage';
+  property_type: 'apartment' | 'house' | 'country_house' | 'land_plot' | 'commercial' | 'hotel' | 'studio';
+  listing_type: 'sale' | 'rent' | 'leasehold_mortgage' | 'lease' | 'daily_rent';
   bedrooms: number;
   bathrooms: number;
   square_feet?: number | null;
@@ -85,8 +89,12 @@ export interface PropertyImage {
 // Amenity interface to match FastAPI backend
 export interface Amenity {
   id: number;
-  name: string;
-  description?: string | null;
+  name: string;  // Georgian name (default)
+  name_en?: string | null;  // English name
+  name_ru?: string | null;  // Russian name
+  description?: string | null;  // Georgian description (default)
+  description_en?: string | null;  // English description
+  description_ru?: string | null;  // Russian description
   icon?: string | null;
   category?: string | null;
 }

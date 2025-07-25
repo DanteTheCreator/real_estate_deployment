@@ -49,15 +49,8 @@ export const CurrencyProvider: React.FC<CurrencyProviderProps> = ({ children }) 
     
     console.log('formatPrice called:', { gelAmount, usdAmount, listingType, currency, amount, formattedAmount });
     
-    // Only show "/month" for rental properties (rent, lease, daily)
-    // Sale properties should NOT show "/month"
-    if (listingType === 'sale') {
-      console.log('Sale property - no suffix');
-      return formattedAmount; // No suffix for sale properties
-    } else {
-      console.log('Rental property - adding /month suffix');
-      return `${formattedAmount}/month`; // Add suffix for rental properties
-    }
+    // Remove "per month" suffix as requested - show only the formatted amount
+    return formattedAmount;
   };
 
   // Get currency symbol

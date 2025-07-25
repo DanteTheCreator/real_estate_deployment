@@ -279,4 +279,18 @@ export const propertyService = {
       return { total: 0, available: 0, cities: [] };
     }
   },
+
+  // Get total count of all available properties
+  async getTotalPropertiesCount(): Promise<{ total_count: number }> {
+    try {
+      const response = await apiService.get<{ total_count: number }>(
+        `${API_ENDPOINTS.PROPERTIES_COUNT}`,
+        { requiresAuth: false }
+      );
+      return response;
+    } catch (error) {
+      console.error('Error fetching total properties count:', error);
+      return { total_count: 0 };
+    }
+  },
 };
