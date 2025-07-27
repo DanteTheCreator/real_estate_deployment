@@ -247,7 +247,7 @@ const Dashboard: React.FC = () => {
                             <div className="flex-1">
                               <h3 className="text-lg font-semibold text-slate-800 mb-2 group-hover:text-blue-600 transition-colors">{listing.title}</h3>
                               <div className="flex items-center gap-4 text-sm text-slate-600">
-                                <span className="font-medium">${listing.rent_amount}</span>
+                                <span className="font-medium">{formatPrice(listing.rent_amount, listing.rent_amount_usd, listing.listing_type)}</span>
                                 <span>{listing.city}, {listing.state}</span>
                               </div>
                             </div>

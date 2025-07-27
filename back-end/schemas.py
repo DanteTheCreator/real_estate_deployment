@@ -117,8 +117,8 @@ class PropertyBase(BaseModel):
     description_ru: Optional[str] = None  # Russian description
     address: str = Field(..., max_length=500)
     city: str = Field(..., max_length=100)
-    state: str = Field(..., max_length=100)
-    zip_code: str = Field(..., max_length=20)
+    state: Optional[str] = Field(None, max_length=100)
+    zip_code: Optional[str] = Field(None, max_length=20)
     country: str = Field(..., max_length=100)
     property_type: str = Field(..., max_length=50)
     listing_type: str = Field(..., max_length=50)
@@ -127,6 +127,7 @@ class PropertyBase(BaseModel):
     square_feet: Optional[int] = None
     lot_size: Optional[float] = None
     rent_amount: float = Field(...)
+    rent_amount_usd: Optional[float] = None
     security_deposit: Optional[float] = None
     lease_duration: int = Field(...)
     available_date: Optional[datetime] = None
@@ -203,8 +204,8 @@ class PropertyListResponse(BaseModel):
     description_ru: Optional[str] = None
     address: str
     city: str
-    state: str
-    zip_code: str
+    state: Optional[str] = None
+    zip_code: Optional[str] = None
     country: str
     property_type: str
     listing_type: str
@@ -213,6 +214,7 @@ class PropertyListResponse(BaseModel):
     square_feet: Optional[int] = None
     lot_size: Optional[float] = None
     rent_amount: float
+    rent_amount_usd: Optional[float] = None
     security_deposit: Optional[float] = None
     lease_duration: int
     available_date: Optional[datetime] = None

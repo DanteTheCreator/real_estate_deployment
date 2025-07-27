@@ -65,8 +65,8 @@ class Property(Base):
     description_ru: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # Russian description
     address: Mapped[str] = mapped_column(String(500))
     city: Mapped[str] = mapped_column(String(100))
-    state: Mapped[str] = mapped_column(String(100))
-    zip_code: Mapped[str] = mapped_column(String(20))
+    state: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    zip_code: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     country: Mapped[str] = mapped_column(String(100))
     property_type: Mapped[str] = mapped_column(String(50))
     listing_type: Mapped[str] = mapped_column(String(50))
@@ -229,10 +229,15 @@ class RentalApplication(Base):
     property: Mapped["Property"] = relationship("Property", back_populates="applications")
     tenant: Mapped["User"] = relationship("User", back_populates="applications")
 
-# Database dependency
+# Database dependency for FastAPI
 def get_db():
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
+
+# Database session context manager for scraper
+def get_database_session():
+    """Returns a database session as a context manager for use in scraper."""
+    return SessionLocal()

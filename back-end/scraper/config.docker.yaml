@@ -1,0 +1,82 @@
+# Docker-optimized configuration for MyHome.ge scraper
+
+# Basic scraping settings (can be overridden by environment variables)
+max_properties: 1000
+batch_size: 50
+delay_between_requests: 0.1
+max_retries: 3
+timeout: 30
+cleanup_days: 7  # Shorter cleanup cycle for production
+
+# Feature toggles optimized for production
+concurrent_languages: false  # Disabled due to API connectivity issues
+enable_image_download: false  # Disabled by default to save storage
+enable_deduplication: true
+enable_owner_priority: true
+
+# Rate limiting - more conservative for production
+rate_limit_per_minute: 300  # Reduced from 600
+
+# Storage paths (Docker volumes)
+image_storage_path: "/app/data/property_images"
+log_directory: "/app/logs"
+reports_directory: "/app/data/reports"
+
+# User agents for rotation
+user_agents:
+  - "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
+  - "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
+  - "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
+  - "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+
+# API endpoints
+api_endpoints:
+  list_properties: "https://api-statements.tnet.ge/v1/statements"
+  property_details: "https://api-statements.tnet.ge/v1/statements"
+  
+# Property type mappings
+property_types:
+  1: "apartment"
+  2: "house"
+  3: "commercial"
+  4: "country_house"
+  5: "land_plot"
+  6: "hotel"
+
+# Deal type mappings
+deal_types:
+  1: "sale"
+  2: "rent"
+  3: "lease"
+  7: "daily_rent"
+
+# Currency mappings
+currency_types:
+  1: "USD"
+  2: "GEL"
+  3: "EUR"
+
+# Supported languages
+languages:
+  - "ka"  # Georgian
+  - "en"  # English
+  - "ru"  # Russian
+
+# Validation settings for Georgian properties (corrected bounds)
+coordinate_bounds:
+  lat_min: 39.5
+  lat_max: 45.0
+  lng_min: 39.0
+  lng_max: 47.0
+
+# Price validation ranges by currency (reasonable ranges for Georgian market including daily rentals)
+price_ranges:
+  USD:
+    min: 10
+    max: 50000
+  GEL:
+    min: 25
+    max: 135000
+  EUR:
+    min: 8
+    max: 45000

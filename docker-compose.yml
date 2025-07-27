@@ -1,5 +1,5 @@
 services:
-  # PostgreSQL Database
+  # Production PostgreSQL Database
   postgres:
     image: postgres:15-alpine
     container_name: comfyrent-postgres
@@ -24,8 +24,18 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # Redis Cache
+  # Redis for caching and session management
   redis:
     image: redis:7-alpine
     container_name: comfyrent-redis
@@ -44,8 +54,18 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # MinIO S3 Storage
+  # MinIO S3-compatible storage
   minio:
     image: minio/minio:RELEASE.2024-01-16T16-07-38Z
     container_name: comfyrent-minio
@@ -61,12 +81,29 @@ services:
     networks:
       - comfyrent-network
     restart: unless-stopped
+    # healthcheck:
+    #   test: ["CMD", "sh", "-c", "curl -f http://localhost:9000/minio/health/live || exit 1"]
+    #   interval: 30s
+    #   timeout: 20s
+    #   retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.25'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # Backend API (includes scraper)
+  # Production Backend API
   backend:
     build:
       context: ./back-end
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.production
+      args:
+        - BUILD_ENV=production
     container_name: comfyrent-backend
     env_file:
       - .env.production
@@ -86,21 +123,30 @@ services:
     networks:
       - comfyrent-network
     restart: unless-stopped
-    volumes:
-      - scraper_data:/app/data
-      - scraper_logs:/app/logs
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # Frontend
+  # Production Frontend
   frontend:
     build:
       context: ./renting-front
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.production
+      args:
+        - BUILD_ENV=production
     container_name: comfyrent-frontend
     env_file:
       - renting-front/.env.production
@@ -116,21 +162,42 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # High-Volume Scraper Service (optimized for 500k+ listings)
+  # Production Scraper (Refactored)
   scraper:
     build:
-      context: ./back-end
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./back-end/scraper/Dockerfile.production
+      args:
+        - BUILD_ENV=production
     container_name: comfyrent-scraper
+    env_file:
+      - .env.production
     environment:
+      # Scraper configuration
+      - MAX_PROPERTIES=1000
+      - BATCH_SIZE=50
+      - SCRAPE_INTERVAL=1  # Run every second for maximum scraping
+      - SCRAPE_MODE=incremental
+      - REPORT_FORMAT=json
+      - RUN_ONCE=false
+      # Database connection
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
       - POSTGRES_DB=comfyrent_production
       - POSTGRES_USER=comfyrent_user
-      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
-    env_file:
-      - .env.production
+      # Logging
+      - LOG_LEVEL=INFO
     secrets:
       - postgres_password
     depends_on:
@@ -141,18 +208,19 @@ services:
     restart: unless-stopped
     volumes:
       - scraper_logs:/app/logs
-    command: |
-      sh -c "
-        echo 'Starting ULTRA-HIGH-SPEED MyHome.ge scraper for 500k properties...';
-        while true; do
-          echo '[$(date)] Running ultra-fast concurrent scrape (10 pages parallel, 200 props/page)...';
-          cd /app && PYTHONPATH=/app python scraper/advanced_myhome_scraper.py --mode incremental --max-pages 25000 --no-reports --fast-mode;
-          echo '[$(date)] Ultra-fast batch completed. Waiting 0.1 seconds before next batch...';
-          sleep 0.1;
-        done
-      "
+      - scraper_data:/app/data
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-# Secrets
+# Production Secrets
 secrets:
   postgres_password:
     file: ./secrets/postgres_password.txt
@@ -163,12 +231,15 @@ secrets:
   jwt_secret_key:
     file: ./secrets/jwt_secret_key.txt
 
-# Networks
+# Production Networks
 networks:
   comfyrent-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
 
-# Volumes
+# Production Volumes
 volumes:
   postgres_data:
     driver: local
@@ -176,7 +247,7 @@ volumes:
     driver: local
   minio_data:
     driver: local
-  scraper_data:
-    driver: local
   scraper_logs:
+    driver: local
+  scraper_data:
     driver: local

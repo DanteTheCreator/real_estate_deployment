@@ -48,17 +48,14 @@ COPY --from=builder /opt/venv /opt/venv
 WORKDIR /app
 
 
-# Create necessary directories
-RUN mkdir -p /app/logs /app/data/property_images /app/data/reports
+# Create logs directory for app logging
+RUN mkdir -p /app/logs
 
 # Copy application code
 COPY --chown=comfyrent:comfyrent . .
 
 # Remove development files
 RUN rm -rf tests/ docs/ *.md .env* requirements-dev.txt
-
-# Make scraper executable
-RUN chmod +x run_scraper.py scraper/advanced_myhome_scraper.py
 
 # Set proper permissions
 RUN chown -R comfyrent:comfyrent /app

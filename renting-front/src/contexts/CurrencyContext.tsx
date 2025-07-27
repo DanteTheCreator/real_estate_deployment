@@ -29,14 +29,14 @@ export const CurrencyProvider: React.FC<CurrencyProviderProps> = ({ children }) 
 
   // Save currency to localStorage when it changes
   const setCurrency = (newCurrency: Currency) => {
-    console.log('setCurrency called:', { from: currency, to: newCurrency });
+    console.log('Currency changing from', currency, 'to', newCurrency);
     setCurrencyState(newCurrency);
     localStorage.setItem('comfyrent_currency', newCurrency);
   };
 
   // Get the appropriate amount based on current currency
   const getAmount = (gelAmount: number, usdAmount?: number | null): number => {
-    if (currency === 'USD' && usdAmount) {
+    if (currency === 'USD' && usdAmount !== null && usdAmount !== undefined) {
       return usdAmount;
     }
     return gelAmount; // Default to GEL amount
@@ -47,7 +47,8 @@ export const CurrencyProvider: React.FC<CurrencyProviderProps> = ({ children }) 
     const amount = getAmount(gelAmount, usdAmount);
     const formattedAmount = currency === 'USD' ? `$${amount.toLocaleString()}` : `₾${amount.toLocaleString()}`;
     
-    console.log('formatPrice called:', { gelAmount, usdAmount, listingType, currency, amount, formattedAmount });
+    // Temporary debug logging
+    console.log('Currency debug:', { currency, gelAmount, usdAmount, selectedAmount: amount, result: formattedAmount });
     
     // Remove "per month" suffix as requested - show only the formatted amount
     return formattedAmount;

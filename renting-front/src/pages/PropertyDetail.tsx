@@ -197,7 +197,7 @@ I am interested in viewing the following property:
 
 Property: ${localizedProperty.title}
 Address: ${localizedProperty.address}
-Rent: ${formatPrice(localizedProperty.rent_amount)}
+Rent: ${formatPrice(localizedProperty.rent_amount || 0, localizedProperty.rent_amount_usd, localizedProperty.listing_type)}
 
 Please let me know your availability for a viewing.
 

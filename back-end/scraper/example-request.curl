@@ -1,4 +1,4 @@
-curl 'https://api-statements.tnet.ge/v1/statements?currency_id=1&page=1' \
+curl 'https://api-statements.tnet.ge/v1/statements?currency_id=1&deal_types=2&real_estate_types=1&page=1' \
   -H 'accept: application/json, text/plain, */*' \
   -H 'accept-language: en-US,en;q=0.9,ka;q=0.8,und;q=0.7' \
   -H 'global-authorization;' \
