@@ -39,6 +39,96 @@ export const propertyService = {
     // Currency parameter for filtering
     if (filters.currency) queryParams.currency = filters.currency;
     
+    // Location filtering - handle selectedLocations
+    if (filters.selectedLocations && filters.selectedLocations.length > 0) {
+      // Map location IDs to actual location names based on the database data
+      const locationMapping: Record<string, { type: 'state' | 'urban_area'; value: string }> = {
+        // Parent areas (states/districts) - mapped to actual database values
+        'vake-saburtalo': { type: 'state', value: 'ვაკე-საბურთალო' },
+        'isani-samgori': { type: 'state', value: 'ისანი-სამგორი' },
+        'gldani-nadzaladevi': { type: 'state', value: 'გლდანი-ნაძალადევი' },
+        'didube-chughureti': { type: 'state', value: 'დიდუბე-ჩუღურეთი' },
+        'old-tbilisi': { type: 'state', value: 'ძველი თბილისი' },
+        'tbilisis-shemogvarea': { type: 'state', value: 'თბილისის შემოგარენი' },
+        
+        // Urban areas (children) - mapped to actual database values
+        'vake': { type: 'urban_area', value: 'ვაკე' },
+        'saburtalo': { type: 'urban_area', value: 'საბურთალო' },
+        'digomi': { type: 'urban_area', value: 'დიღომი' },
+        'ponichala': { type: 'urban_area', value: 'ფონიჩალა' },
+        'kus-tba': { type: 'urban_area', value: 'კუს ტბა' },
+        'temqa': { type: 'urban_area', value: 'ლისი ტემქა' },
+        'digmis-chala': { type: 'urban_area', value: 'დიღმის ჩალა' },
+        'davit-aghmasheneblis-gamz': { type: 'urban_area', value: 'დავით აღმაშენებლის გამზ.' },
+        'avtomsheneblis-dal': { type: 'urban_area', value: 'ავტომშენებლის დალ.' },
+        'damtsklis-dal': { type: 'urban_area', value: 'დამასკლის დალ.' },
+        'varketilis-dal': { type: 'urban_area', value: 'ვარკეთილს დალ.' },
+        'navtlughi': { type: 'urban_area', value: 'ნავთლუღი' },
+        'varchkhotili': { type: 'urban_area', value: 'ვარჩხოთილი' },
+        'orchevi': { type: 'urban_area', value: 'ორჩევი' },
+        'nachikebi': { type: 'urban_area', value: 'ნაჩიკები' },
+        'samgori': { type: 'urban_area', value: 'სამგორი' },
+        'gldani': { type: 'urban_area', value: 'გლდანი' },
+        'gldanula': { type: 'urban_area', value: 'გლდანულა' },
+        'baghebi': { type: 'urban_area', value: 'ბაღები' },
+        'othkhlis-bdo': { type: 'urban_area', value: 'ოთხოლის ბდო' },
+        'telqa': { type: 'urban_area', value: 'თელქა' },
+        'korchanki-dal': { type: 'urban_area', value: 'კორჩანკის დალ.' },
+        'lilo': { type: 'urban_area', value: 'ლილო' },
+        'sof-gldan': { type: 'urban_area', value: 'სოფ. გლდან' },
+        'avchala': { type: 'urban_area', value: 'ავჩალა' },
+        'gioni-grmebi-dal': { type: 'urban_area', value: 'გიორგი გრმების დალ.' },
+        'didube': { type: 'urban_area', value: 'დიდუბე' },
+        'didubis-masivi': { type: 'urban_area', value: 'დიდუბის მასივი' },
+        'kuki': { type: 'urban_area', value: 'კუკია' },
+        'chrdilis': { type: 'urban_area', value: 'ჩრდილის' },
+        'teleti': { type: 'urban_area', value: 'თელეთი' },
+        'iveritubani': { type: 'urban_area', value: 'ივერიუბანი' },
+        'avlabari': { type: 'urban_area', value: 'ავლაბარი' },
+        'tseretlis-dal': { type: 'urban_area', value: 'წერეთლის დალ.' },
+        'mukhatgverdi': { type: 'urban_area', value: 'მუხათგვერდი' },
+        'abanotubani': { type: 'urban_area', value: 'აბანოთუბანი' },
+        'ananuri-gverdi': { type: 'urban_area', value: 'ანანურის გვერდი' },
+        'elia': { type: 'urban_area', value: 'ელია' },
+        'metekhi': { type: 'urban_area', value: 'მეტეხი' },
+        'sameba': { type: 'urban_area', value: 'სამება' },
+        'sololaki': { type: 'urban_area', value: 'სოლოლაკი' },
+        'tskhinvali': { type: 'urban_area', value: 'ცხინვალი' },
+        'abokhaleba': { type: 'urban_area', value: 'აბოხალება' },
+        'botaniki': { type: 'urban_area', value: 'ბოტანიკი' },
+        'kaklebi': { type: 'urban_area', value: 'კაკლები' },
+        'kotkhebi': { type: 'urban_area', value: 'კოტხები' },
+        'ortachala': { type: 'urban_area', value: 'ორთაჩალა' },
+        'shindisi': { type: 'urban_area', value: 'შინდისი' },
+        'tsavkisi': { type: 'urban_area', value: 'წავკისი' },
+        'tskneti': { type: 'urban_area', value: 'წყნეთი' },
+        'meshakhte': { type: 'urban_area', value: 'მესხეთე' },
+        'akhaldaba': { type: 'urban_area', value: 'ახალდაბა' },
+        'mtskheta': { type: 'urban_area', value: 'მცხეთა' },
+        'begiti': { type: 'urban_area', value: 'ბეგითი' },
+        'kweseti': { type: 'urban_area', value: 'კვესეთი' },
+        
+        // Additional mappings based on actual database data
+        'chughureti': { type: 'urban_area', value: 'ჩუღურეთი' },
+        'mtatsminda': { type: 'urban_area', value: 'მთაწმინდა' },
+        'mukhiani': { type: 'urban_area', value: 'მუხიანი' }
+      };
+      
+      // Send the first matching location parameter to the backend
+      for (const locationId of filters.selectedLocations) {
+        const mapping = locationMapping[locationId];
+        if (mapping) {
+          if (mapping.type === 'state') {
+            queryParams.state = mapping.value;
+            break; // Use the first match
+          } else if (mapping.type === 'urban_area') {
+            queryParams.urban_area = mapping.value;
+            break; // Use the first match
+          }
+        }
+      }
+    }
+    
     // Additional filters for area search
     if (filters.areaMin) queryParams.min_square_feet = filters.areaMin;
     if (filters.areaMax) queryParams.max_square_feet = filters.areaMax;
@@ -69,6 +159,17 @@ export const propertyService = {
     const totalCount = countResponse.total_count;
     const hasNext = properties.length === limit && (page * limit) < totalCount;
     const totalPages = Math.ceil(totalCount / limit);
+    
+    // Debug logging
+    console.log('PropertyService.searchProperties Debug:', {
+      queryParams,
+      countParams,
+      propertiesLength: properties.length,
+      totalCount,
+      hasNext,
+      totalPages,
+      page
+    });
     
     return {
       data: properties,

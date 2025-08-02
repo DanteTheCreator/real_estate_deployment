@@ -331,6 +331,17 @@ class PropertySearchFilters(BaseModel):
 class MessageResponse(BaseModel):
     message: str
 
+class PaginationInfo(BaseModel):
+    currentPage: int
+    totalPages: int
+    totalCount: int
+    hasNext: bool
+    hasPrev: bool
+
+class PropertyPaginatedResponse(BaseModel):
+    data: List[PropertyListResponse]
+    pagination: PaginationInfo
+
 class PaginatedResponse(BaseModel):
     items: List[dict]
     total: int

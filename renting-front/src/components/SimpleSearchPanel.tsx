@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Search, Home, Building, MapPin, SlidersHorizontal, DollarSign } from 'lucide-react';
+import { LocationSelector } from '@/components/LocationSelector';
 import { useProperties } from '@/hooks/useProperties';
 import { useAppContext } from '@/contexts/AppContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -27,6 +28,7 @@ const SimpleSearchPanel: React.FC<SimpleSearchPanelProps> = ({ className = '', o
     propertyType: 'all', // Changed from empty string to 'all'
     listingType: 'sale',
     location: '',
+    selectedLocations: [], // New field for hierarchical location selection
     priceMin: undefined,
     priceMax: undefined,
     currency: 'GEL',
@@ -58,6 +60,7 @@ const SimpleSearchPanel: React.FC<SimpleSearchPanelProps> = ({ className = '', o
         query: searchForm.query || undefined,
         property_type: searchForm.propertyType === 'all' ? undefined : searchForm.propertyType,
         city: searchForm.location || undefined,
+        selectedLocations: searchForm.selectedLocations && searchForm.selectedLocations.length > 0 ? searchForm.selectedLocations : undefined,
         min_rent: searchForm.priceMin,
         max_rent: searchForm.priceMax,
         min_bedrooms: searchForm.bedroomsMin,
@@ -142,30 +145,12 @@ const SimpleSearchPanel: React.FC<SimpleSearchPanelProps> = ({ className = '', o
           <div className="w-px h-8 bg-border" />
 
           {/* Location Selector */}
-          <div className="flex items-center gap-2 min-w-[120px]">
-            <MapPin className="w-4 h-4 text-muted-foreground" />
-            <Select 
-              value={searchForm.location} 
-              onValueChange={(value) => setSearchForm({ ...searchForm, location: value })}
-            >
-              <SelectTrigger className="border-0 shadow-none bg-transparent">
-                <SelectValue placeholder={t('search.location')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="vake">Vake</SelectItem>
-                <SelectItem value="saburtalo">Saburtalo</SelectItem>
-                <SelectItem value="didube">Didube</SelectItem>
-                <SelectItem value="isani">Isani</SelectItem>
-                <SelectItem value="samgori">Samgori</SelectItem>
-                <SelectItem value="chugureti">Chugureti</SelectItem>
-                <SelectItem value="krtsanisi">Krtsanisi</SelectItem>
-                <SelectItem value="mtatsminda">Mtatsminda</SelectItem>
-                <SelectItem value="old-tbilisi">Old Tbilisi</SelectItem>
-                <SelectItem value="gldani">Gldani</SelectItem>
-                <SelectItem value="nadzaladevi">Nadzaladevi</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <LocationSelector
+            selectedLocations={searchForm.selectedLocations || []}
+            onLocationChange={(locations) => setSearchForm({ ...searchForm, selectedLocations: locations })}
+            placeholder={t('search.location')}
+            className="min-w-[160px]"
+          />
 
           <div className="w-px h-8 bg-border" />
 

@@ -7,7 +7,7 @@ from schemas import (
     PropertyCreate, PropertyUpdate, PropertyResponse, PropertyListResponse,
     AmenityResponse, PropertySearchFilters, MessageResponse,
     PropertyImageCreate, PropertyImageResponse, PropertyImageUpdate,
-    PropertyType
+    PropertyType, PropertyPaginatedResponse, PaginationInfo
 )
 from auth import get_current_active_user, require_landlord
 
@@ -32,24 +32,38 @@ async def get_properties(
     query = db.query(Property).options(joinedload(Property.images)).filter(Property.is_available == True)
     
     # Apply filters
-    if city:
-        query = query.filter(Property.city.ilike(f"%{city}%"))
-    if state:
-        query = query.filter(Property.state.ilike(f"%{state}%"))
     if property_type:
-        query = query.filter(Property.property_type == property_type)
-    if min_rent is not None:
-        query = query.filter(Property.rent_amount >= min_rent)
-    if max_rent is not None:
-        query = query.filter(Property.rent_amount <= max_rent)
-    if min_bedrooms is not None:
-        query = query.filter(Property.bedrooms >= min_bedrooms)
-    if max_bedrooms is not None:
-        query = query.filter(Property.bedrooms <= max_bedrooms)
-    if pets_allowed is not None:
-        query = query.filter(Property.pets_allowed == pets_allowed)
-    if is_furnished is not None:
-        query = query.filter(Property.is_furnished == is_furnished)
+        query_obj = query_obj.filter(Property.property_type.ilike(f"%{property_type}%"))
+    if min_price:
+        query_obj = query_obj.filter(Property.rent_amount_usd >= min_price)
+    if max_price:
+        query_obj = query_obj.filter(Property.rent_amount_usd <= max_price)
+    if bedrooms:
+        query_obj = query_obj.filter(Property.bedrooms >= bedrooms)
+    if bathrooms:
+        query_obj = query_obj.filter(Property.bathrooms >= bathrooms)
+    if min_square_feet:
+        query_obj = query_obj.filter(Property.square_feet >= min_square_feet)
+    if max_square_feet:
+        query_obj = query_obj.filter(Property.square_feet <= max_square_feet)
+    if city:
+        query_obj = query_obj.filter(Property.city.ilike(f"%{city}%"))
+    if state:
+        query_obj = query_obj.filter(and_(Property.state.is_not(None), Property.state.ilike(f"%{state}%")))
+    if urban_area:
+        query_obj = query_obj.filter(and_(Property.urban_area.is_not(None), Property.urban_area.ilike(f"%{urban_area}%")))
+    if currency:
+        query_obj = query_obj.filter(Property.currency == currency)
+        
+    # Apply ordering
+    if sort_by == "price_asc":
+        query_obj = query_obj.order_by(Property.rent_amount_usd.asc())
+    elif sort_by == "price_desc":
+        query_obj = query_obj.order_by(Property.rent_amount_usd.desc())
+    elif sort_by == "date_desc":
+        query_obj = query_obj.order_by(Property.created_at.desc())
+    else:  # default
+        query_obj = query_obj.order_by(Property.created_at.desc())
     
     properties = query.offset(skip).limit(limit).all()
     return [PropertyListResponse.model_validate(prop) for prop in properties]
@@ -61,6 +75,8 @@ async def search_properties(
     query: Optional[str] = Query(None, description="General search query"),
     city: Optional[str] = Query(None, description="City filter"),
     state: Optional[str] = Query(None, description="State filter"),
+    urban_area: Optional[str] = Query(None, description="Urban area filter"),
+    district: Optional[str] = Query(None, description="District filter"),
     property_type: Optional[str] = Query(None, description="Property type filter"),
     listing_type: Optional[str] = Query(None, description="Listing type filter (rent, sale, lease, daily, mortgage)"),
     min_bedrooms: Optional[int] = Query(None, ge=0, description="Minimum bedrooms"),
@@ -100,7 +116,11 @@ async def search_properties(
     if city:
         query_obj = query_obj.filter(Property.city.ilike(f"%{city}%"))
     if state:
-        query_obj = query_obj.filter(Property.state.ilike(f"%{state}%"))
+        query_obj = query_obj.filter(and_(Property.state.is_not(None), Property.state == state))
+    if urban_area:
+        query_obj = query_obj.filter(and_(Property.urban_area.is_not(None), Property.urban_area == urban_area))
+    if district:
+        query_obj = query_obj.filter(and_(Property.district.is_not(None), Property.district == district))
     
     # Property type filter
     if property_type:
@@ -237,6 +257,8 @@ async def get_search_count(
     query: Optional[str] = Query(None, description="General search query"),
     city: Optional[str] = Query(None, description="City filter"),
     state: Optional[str] = Query(None, description="State filter"),
+    urban_area: Optional[str] = Query(None, description="Urban area filter"),
+    district: Optional[str] = Query(None, description="District filter"),
     property_type: Optional[str] = Query(None, description="Property type filter"),
     listing_type: Optional[str] = Query(None, description="Listing type filter (rent, sale, lease, daily, mortgage)"),
     min_bedrooms: Optional[int] = Query(None, ge=0, description="Minimum bedrooms"),
@@ -273,7 +295,11 @@ async def get_search_count(
     if city:
         query_obj = query_obj.filter(Property.city.ilike(f"%{city}%"))
     if state:
-        query_obj = query_obj.filter(Property.state.ilike(f"%{state}%"))
+        query_obj = query_obj.filter(and_(Property.state.is_not(None), Property.state == state))
+    if urban_area:
+        query_obj = query_obj.filter(and_(Property.urban_area.is_not(None), Property.urban_area == urban_area))
+    if district:
+        query_obj = query_obj.filter(and_(Property.district.is_not(None), Property.district == district))
     if property_type:
         query_obj = query_obj.filter(Property.property_type == property_type)
     if listing_type:

@@ -53,6 +53,8 @@ export const useProperties = (): UsePropertiesReturn => {
       const pageToUse = resetPage ? 1 : currentPage;
       const response = await propertyService.searchProperties(convertedFilters, pageToUse, 20);
       
+      console.log('useProperties.searchProperties response:', response);
+      
       if (resetPage) {
         setProperties(response.data);
         setCurrentPage(1);
@@ -63,6 +65,12 @@ export const useProperties = (): UsePropertiesReturn => {
       
       setTotalCount(response.pagination.totalCount);
       setTotalPages(response.pagination.totalPages);
+      
+      console.log('useProperties state after update:', {
+        propertiesLength: response.data.length,
+        totalCount: response.pagination.totalCount,
+        currentPage: resetPage ? 1 : response.pagination.currentPage
+      });
       
       // Add to recent searches only for new searches
       if (resetPage) {

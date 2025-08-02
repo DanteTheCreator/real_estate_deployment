@@ -76,7 +76,25 @@ const ListingCard: React.FC<ListingCardProps> = ({ property }) => {
   };
 
   const formatAddress = (property: Property) => {
-    return `${property.address}, ${property.city}, ${property.state}`;
+    const parts = [];
+    
+    // If we have a specific address, use it
+    if (property.address && property.address.trim()) {
+      parts.push(property.address.trim());
+    }
+    
+    // Always include urban area if different from address
+    if (property.urban_area && property.urban_area.trim()) {
+      parts.push(property.urban_area.trim());
+    }
+    
+    // Always include city
+    if (property.city && property.city.trim()) {
+      parts.push(property.city.trim());
+    }
+    
+    // Return formatted address, or fallback if no parts
+    return parts.length > 0 ? parts.join(', ') : 'Address not available';
   };
 
   return (

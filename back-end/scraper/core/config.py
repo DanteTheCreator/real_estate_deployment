@@ -15,7 +15,7 @@ class ScrapingConfig:
     """Configuration for the scraper."""
     
     # Basic scraping settings
-    max_properties: int = 1000
+    max_properties: int = 50000  # Increased to handle more properties
     batch_size: int = 50
     delay_between_requests: float = 0.01  # Much faster - 10ms between requests
     max_retries: int = 3
@@ -65,17 +65,18 @@ class ScrapingConfig:
     
     # Deal type mappings
     deal_types: Dict[int, str] = field(default_factory=lambda: {
-        1: "sale",
-        2: "rent",
-        3: "lease",
-        7: "daily_rent"
+        1: "sale",           # იყიდება (for sale)
+        2: "rent",           # ქირავდება (for rent)
+        3: "lease",          # გაიცემა იჯარით (given for lease)
+        4: "mortgage",       # გირავდება (mortgage/collateral)
+        7: "daily_rent"      # ქირავდება დღიურად (daily rent)
     })
     
     # Default deal types to scrape (all types)
-    default_deal_types: str = "1,2,3,7"  # sale, rent, lease, daily_rent
+    default_deal_types: str = "1,2,3,4,7"  # sale, rent, lease, mortgage, daily_rent
     
     # API pagination settings
-    per_page: int = 1000  # Maximum properties per API request
+    per_page: int = 1000  # Maximum properties per API request (updated to 10k)
     
     # Default deal types to scrape (all types)
     default_deal_types: str = "1,2,3,7"  # sale, rent, lease, daily_rent

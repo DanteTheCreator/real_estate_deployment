@@ -31,6 +31,8 @@ export interface Property {
   address: string;
   city: string;
   state: string;
+  district?: string | null;  // Additional location field from backend
+  urban_area?: string | null;  // Additional location field from backend
   zip_code: string;
   country?: string;
   property_type: 'apartment' | 'house' | 'country_house' | 'land_plot' | 'commercial' | 'hotel' | 'studio';
@@ -157,12 +159,13 @@ export interface SearchFilters {
   propertyType?: string;
   listingType?: string;
   location?: string;
+  selectedLocations?: string[]; // New field for hierarchical location selection
   priceMin?: number;
   priceMax?: number;
   currency?: 'GEL' | 'USD';
   areaMin?: number;
   areaMax?: number;
-  bedroomsMin?: number;
+  bedroomsMin?: number;  
   bedroomsMax?: number;
   yardAreaMin?: number;
   yardAreaMax?: number;

@@ -185,12 +185,13 @@ services:
       - .env.production
     environment:
       # Scraper configuration
-      - MAX_PROPERTIES=1000
+      - MAX_PROPERTIES=50000
       - BATCH_SIZE=50
-      - SCRAPE_INTERVAL=1  # Run every second for maximum scraping
+      - SCRAPE_INTERVAL=15  # Run every 15 seconds as requested
       - SCRAPE_MODE=incremental
       - REPORT_FORMAT=json
       - RUN_ONCE=false
+      - PER_PAGE=10000  # 10,000 listings per page as requested
       # Database connection
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432

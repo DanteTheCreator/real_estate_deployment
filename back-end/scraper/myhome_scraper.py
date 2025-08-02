@@ -11,8 +11,6 @@ Version: 2.0.0 (Refactored)
 
 import asyncio
 import logging
-import sys
-import os
 from datetime import datetime
 from typing import Dict, List, Optional
 
@@ -84,6 +82,9 @@ class MyHomeAdvancedScraper(BaseScraper):
         self.deduplication_service = DeduplicationService(config)
         self.report_service = ReportService(config)
         
+        # Track seen property IDs to avoid reprocessing
+        self.seen_property_ids = set()
+        
         # Create necessary directories
         self.create_directories()
         
@@ -93,6 +94,9 @@ class MyHomeAdvancedScraper(BaseScraper):
                     deal_type_filter: Optional[int] = None) -> ScrapingStats:
         """Main scraping method with full multilingual support."""
         self.logger.info("Starting full scraping mode")
+        
+        # Reset seen properties for this scraping cycle
+        self.seen_property_ids.clear()
         
         db = self.database_service.get_session()
         try:
@@ -130,10 +134,12 @@ class MyHomeAdvancedScraper(BaseScraper):
         """Scrape properties with pagination and processing."""
         properties_processed = 0
         page = 1
+        consecutive_empty_pages = 0
+        max_consecutive_empty = 3  # Stop after 3 consecutive empty pages
         
         # Create aiohttp session for multilingual extraction
         async with aiohttp.ClientSession() as async_session:
-            while properties_processed < self.config.max_properties:
+            while properties_processed < self.config.max_properties and consecutive_empty_pages < max_consecutive_empty:
                 try:
                     # Fetch properties page
                     data = await self._fetch_properties_page(
@@ -141,20 +147,49 @@ class MyHomeAdvancedScraper(BaseScraper):
                     )
                     
                     if not data or not data.get('data'):
-                        self.logger.info("No more properties to fetch")
-                        break
+                        consecutive_empty_pages += 1
+                        self.logger.info(f"📭 Page {page}: No data returned (consecutive empty: {consecutive_empty_pages})")
+                        if consecutive_empty_pages >= max_consecutive_empty:
+                            self.logger.info(f"🛑 Stopping after {max_consecutive_empty} consecutive empty pages")
+                            break
+                        page += 1
+                        continue
                     
                     properties = data['data']
-                    self.stats.total_fetched += len(properties)
                     
+                    if len(properties) == 0:
+                        consecutive_empty_pages += 1
+                        self.logger.info(f"📭 Page {page}: Empty page (consecutive empty: {consecutive_empty_pages})")
+                        if consecutive_empty_pages >= max_consecutive_empty:
+                            self.logger.info(f"🛑 Stopping after {max_consecutive_empty} consecutive empty pages")
+                            break
+                        page += 1
+                        continue
+                    
+                    # Reset consecutive empty counter when we get data
+                    consecutive_empty_pages = 0
+                    
+                    self.stats.total_fetched += len(properties)
                     self.logger.info(f"🔄 Page {page}: Fetched {len(properties)} properties")
                     
                     # Process each property
+                    processed_in_page = 0
+                    new_properties_in_page = 0
                     for raw_property in properties:
                         try:
+                            property_id = raw_property.get('id')
+                            if property_id and str(property_id) in self.seen_property_ids:
+                                self.logger.debug(f"🔄 Skipping already processed property {property_id} in this cycle")
+                                continue
+                            
+                            if property_id:
+                                self.seen_property_ids.add(str(property_id))
+                                new_properties_in_page += 1
+                            
                             await self._process_single_property(
                                 db, async_session, raw_property, default_user
                             )
+                            processed_in_page += 1
                                 
                         except Exception as e:
                             self.logger.error(f"Error processing property {raw_property.get('id', 'unknown')}: {e}")
@@ -163,31 +198,42 @@ class MyHomeAdvancedScraper(BaseScraper):
                     
                     properties_processed += len(properties)
                     
-                    page += 1
+                    self.logger.info(f"📋 Page {page}: Processed {processed_in_page}/{len(properties)} properties")
                     
-                    self.logger.info(f"📋 Page {page-1}: Processed {len(properties)} properties")
+                    # If we're not getting any new properties, we might be repeating data
+                    if new_properties_in_page == 0:
+                        self.logger.warning(f"⚠️ Page {page}: All properties already seen - API repeating data")
+                        consecutive_empty_pages += 1
+                        if consecutive_empty_pages >= max_consecutive_empty:
+                            self.logger.info(f"🛑 Stopping due to repeated data")
+                            break
                     
                     # Progress logging
-                    if properties_processed % 100 == 0:
+                    if properties_processed % 1000 == 0:
                         self.logger.info(f"📊 Total progress: {properties_processed} properties processed")
+                    
+                    # Move to next page
+                    page += 1
                     
                     # Respect rate limits
                     await asyncio.sleep(self.config.delay_between_requests)
                     
-                    # Break if we got no properties (empty page) or significantly fewer than expected
-                    # API can return up to 1000 properties per page with per_page parameter
+                    # Check if we got fewer properties than requested (might be last page)
                     per_page = getattr(self.config, 'per_page', 1000)
-                    if len(properties) == 0:
-                        self.logger.info(f"🛑 Received 0 properties - last page reached")
-                        break
-                    elif len(properties) < per_page * 0.1:  # Less than 10% of requested page size
-                        self.logger.info(f"🛑 Received {len(properties)} properties (less than 10% of page size {per_page}) - likely last page reached")
+                    if len(properties) < per_page:
+                        self.logger.info(f"🛑 Received {len(properties)} properties (less than {per_page} requested) - likely last page")
                         break
                 
                 except Exception as e:
                     self.logger.error(f"Error fetching page {page}: {e}")
                     self.stats.errors += 1
-                    break
+                    consecutive_empty_pages += 1
+                    if consecutive_empty_pages >= max_consecutive_empty:
+                        break
+                    page += 1
+                    continue
+            
+            self.logger.info(f"🎯 Scraping completed: {properties_processed} properties processed across {page-1} pages")
     
     async def _fetch_properties_page(self, page: int, 
                                    property_type_filter: Optional[int],
@@ -196,7 +242,7 @@ class MyHomeAdvancedScraper(BaseScraper):
         # Use configured default property types or fallback to all types
         default_property_types = getattr(self.config, 'default_property_types', "2,1,3,4,5,6")
         default_deal_types = getattr(self.config, 'default_deal_types', "1,2,3,7")
-        per_page = getattr(self.config, 'per_page', 1000)
+        per_page = getattr(self.config, 'per_page', 1000)  # Updated to 1000 as the API limit
         
         params = {
             'currency_id': 1,  # USD
@@ -206,7 +252,7 @@ class MyHomeAdvancedScraper(BaseScraper):
             'per_page': per_page  # Get maximum properties per request
         }
         
-        self.logger.debug(f"🌐 Fetching page {page} with params: {params}")
+        self.logger.info(f"🌐 Fetching page {page} with params: {params}")
         
         try:
             response = self.make_request(
@@ -216,19 +262,20 @@ class MyHomeAdvancedScraper(BaseScraper):
             
             data = response.json()
             
+            # Extract actual response info
+            properties_returned = len(data['data']['data']) if data.get('data') and data['data'].get('data') else 0
+            
+            # Log clean pagination info
+            self.logger.info(f"📊 API Response - Page {page}: {properties_returned} properties returned")
+            
             if data.get('result') and data.get('data') and data['data'].get('data'):
                 properties = data['data']['data']  # Navigate to the actual properties array
                 self.logger.info(f"📥 Successfully fetched {len(properties)} properties from page {page}")
                 
-                # Log first property ID for debugging pagination
-                if properties:
-                    first_id = properties[0].get('id', 'unknown')
-                    last_id = properties[-1].get('id', 'unknown')
-                    self.logger.info(f"📋 Page {page} - Property range: {first_id} to {last_id}")
-                
                 return {'result': True, 'data': properties}
             else:
                 self.logger.warning(f"⚠️ No data returned from API for page {page}")
+                self.logger.debug(f"API Response structure: {data}")
                 return None
                 
         except Exception as e:
@@ -244,6 +291,8 @@ class MyHomeAdvancedScraper(BaseScraper):
         if not property_data:
             return
         
+        property_id = property_data.external_id
+        
         # Step 2: Check for duplicates
         duplicates = self.deduplication_service.find_duplicates(db, property_data)
         
@@ -251,14 +300,14 @@ class MyHomeAdvancedScraper(BaseScraper):
             existing_property = duplicates[0]
             
             if self.deduplication_service.should_replace_duplicate(property_data, existing_property):
-                self.logger.info(f"Replacing agency listing with owner listing for property {property_data.external_id}")
+                self.logger.info(f"Replacing agency listing with owner listing for property {property_id}")
                 db.delete(existing_property)
                 db.flush()
                 self.stats.agency_discarded += 1
             else:
-                self.logger.debug(f"Skipping duplicate property {property_data.external_id}")
+                self.logger.debug(f"Skipping duplicate property {property_id}")
                 self.stats.duplicates_skipped += 1
-                return
+                return  # Skip processing this duplicate
         
         # Step 3: Enhanced processing
         await self._enhance_property_data(async_session, property_data, raw_data)
@@ -266,17 +315,12 @@ class MyHomeAdvancedScraper(BaseScraper):
         # Step 4: Save to database
         saved_property = self._save_property_to_database(db, property_data, default_user)
         
-        property_id = property_data.external_id
-        self.logger.info(f"🔄 Processing single property: {property_id}")
-        
         if saved_property:
-            # Update statistics
+            # Update statistics based on whether this is truly a new property
             if saved_property.created_at.date() == datetime.now().date():
                 self.stats.new_properties += 1
-                self.logger.info(f"🆕 Property {property_id} marked as NEW")
             else:
                 self.stats.updated_properties += 1
-                self.logger.info(f"🔄 Property {property_id} marked as UPDATED")
             
             # Track property and deal types
             self.stats.add_property_type(property_data.property_type)
@@ -285,7 +329,6 @@ class MyHomeAdvancedScraper(BaseScraper):
             # Track owner prioritization
             if self.deduplication_service.is_owner_listing(property_data):
                 self.stats.owner_prioritized += 1
-                self.logger.debug(f"👤 Property {property_id} prioritized as owner listing")
         else:
             self.logger.warning(f"⚠️ Property {property_id} was not saved to database")
     
@@ -335,10 +378,6 @@ class MyHomeAdvancedScraper(BaseScraper):
             self.stats.errors += 1
             return None
     
-    def validate_property_data(self, property_data: PropertyData) -> bool:
-        """Always return True - no validation needed for MyHome.ge data."""
-        return True
-    
     def generate_report(self, output_format: str = "json") -> str:
         """Generate comprehensive scraping report."""
         try:
@@ -360,28 +399,9 @@ class MyHomeAdvancedScraper(BaseScraper):
         """Get current configuration."""
         return self.config.to_dict()
 
-
-# Convenience functions for backwards compatibility
-async def scrape_properties(config: ScrapingConfig = None, 
-                          **kwargs) -> ScrapingStats:
-    """Convenience function to run the scraper."""
-    scraper = MyHomeAdvancedScraper(config)
-    try:
-        return await scraper.scrape(**kwargs)
-    finally:
-        scraper.finalize()
-
-
-def create_scraper_from_config_file(config_path: str) -> MyHomeAdvancedScraper:
-    """Create scraper instance from configuration file."""
-    config = ScrapingConfig.from_file(config_path)
-    return MyHomeAdvancedScraper(config)
-
-
-def create_scraper_from_env() -> MyHomeAdvancedScraper:
-    """Create scraper instance from environment variables."""
-    config = ScrapingConfig.from_env()
-    return MyHomeAdvancedScraper(config)
+    def validate_property_data(self, property_data: Dict) -> bool:
+        """Validate property data - minimal implementation."""
+        return property_data is not None and 'id' in property_data
 
 
 if __name__ == "__main__":
@@ -395,15 +415,17 @@ if __name__ == "__main__":
             scraper = MyHomeAdvancedScraper()
             
             # Run continuous scraping
+            cycle_count = 0
             while True:
-                print("Starting scraping cycle...")
+                cycle_count += 1
+                print(f"Starting scraping cycle #{cycle_count}...")
                 stats = await scraper.scrape()
                 
-                print(f"Scraping completed - New: {stats.new_properties}, Updated: {stats.updated_properties}, Errors: {stats.errors}")
+                print(f"Scraping completed - New: {stats.new_properties}, Updated: {stats.updated_properties}, Duplicates Skipped: {stats.duplicates_skipped}, Errors: {stats.errors}")
                 
-                # Wait 1 second before next cycle
-                print("Waiting 1 second before next cycle...")
-                await asyncio.sleep(1)  # 1 second
+                # Wait 15 seconds before next cycle (as requested)
+                print("Waiting 15 seconds before next cycle...")
+                await asyncio.sleep(15)  # 15 seconds
                 
         except KeyboardInterrupt:
             print("Scraper stopped by user")

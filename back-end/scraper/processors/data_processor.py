@@ -44,9 +44,9 @@ class DataProcessor:
             self._process_features(property_data, raw_data)
             self._process_building_details(property_data, raw_data)
             
-            # Set listing type
+            # Set user type (owner vs agency)
             user_type = self._determine_user_type(raw_data)
-            property_data.listing_type = user_type
+            property_data.user_type = user_type
             
             # Final logging of key values
             self.logger.info(f"✅ Property {property_id} processed successfully:")
@@ -74,8 +74,38 @@ class DataProcessor:
     
     def _process_location(self, property_data: PropertyData, raw_data: Dict) -> None:
         """Process location information."""
-        # Location
-        property_data.address = raw_data.get('street_address', '')
+        property_id = raw_data.get('id', 'unknown')
+        
+        # Location - use 'address' field from API (not 'street_address')
+        raw_address = raw_data.get('address', '')
+        
+        # More comprehensive address extraction - check different possible fields
+        if not raw_address:
+            # Try alternative address field names
+            raw_address = raw_data.get('street_address', '') or raw_data.get('full_address', '')
+        
+        # If still no address, try to construct one from street info
+        if not raw_address:
+            street_name = raw_data.get('street_name', '')
+            house_number = raw_data.get('house_number', '') or raw_data.get('building_number', '')
+            if street_name:
+                raw_address = f"{street_name} {house_number}".strip()
+        
+        property_data.address = raw_address
+        
+        # Enhanced logging for address processing
+        if raw_address:
+            self.logger.info(f"📍 Property {property_id}: Found address '{raw_address}'")
+        else:
+            self.logger.warning(f"⚠️  Property {property_id}: No address found in raw data")
+            # Log all available keys to debug
+            address_related_keys = [k for k in raw_data.keys() if any(term in k.lower() for term in ['addr', 'street', 'house', 'building', 'location'])]
+            self.logger.warning(f"🔍 Available address-related fields: {address_related_keys}")
+            
+            # Log the first few keys to see the structure
+            all_keys = list(raw_data.keys())[:15]
+            self.logger.warning(f"🔍 First 15 raw data keys: {all_keys}")
+        
         property_data.city = raw_data.get('city_name') or 'Tbilisi'  # Ensure city is never None
         property_data.state = raw_data.get('district_name') or 'Georgia'  # Ensure state is never None
         property_data.district = raw_data.get('district_name')
@@ -90,6 +120,8 @@ class DataProcessor:
     
     def _process_property_details(self, property_data: PropertyData, raw_data: Dict) -> None:
         """Process property physical details."""
+        property_id = raw_data.get('id', 'unknown')
+        
         # Set property type based on real_estate_type_id
         property_type_id = raw_data.get('real_estate_type_id')
         if property_type_id == 1:
@@ -103,12 +135,17 @@ class DataProcessor:
         
         # Set listing type based on deal_type_id
         deal_type_id = raw_data.get('deal_type_id')
+        self.logger.info(f"🏷️  Processing deal_type_id for property {property_id}: {deal_type_id}")
+        
         if deal_type_id == 1:
             property_data.listing_type = 'sale'
+            self.logger.info(f"✅ Set listing_type='sale' for property {property_id}")
         elif deal_type_id == 2:
             property_data.listing_type = 'rent'
+            self.logger.info(f"✅ Set listing_type='rent' for property {property_id}")
         else:
             property_data.listing_type = 'rent'  # Default since we're focusing on rentals
+            self.logger.info(f"🔧 Set default listing_type='rent' for property {property_id} (deal_type_id: {deal_type_id})")
         
         # Convert bedroom and room from strings to integers
         bedroom = raw_data.get('bedroom', '1')
@@ -130,6 +167,12 @@ class DataProcessor:
     
     def _process_basic_financial(self, property_data: PropertyData, raw_data: Dict) -> None:
         """Process basic financial information."""
+        # Process main price - could be sale price or rent amount
+        price = self._safe_float(raw_data.get('price'))
+        if price > 0:
+            property_data.rent_amount = price
+        
+        # Process additional financial fields
         property_data.security_deposit = self._safe_float(raw_data.get('security_deposit'))
         property_data.lease_duration = self._safe_int(raw_data.get('lease_duration'), 12)
     
