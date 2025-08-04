@@ -58,7 +58,7 @@ class DeduplicationService:
                 duplicates.append(exact_match)
                 return duplicates
             else:
-                self.logger.debug(f"✅ No exact match found for property {property_id}")
+                pass  # No exact match found
             
             # Secondary check: coordinate-based matching
             if property_data.latitude and property_data.longitude:

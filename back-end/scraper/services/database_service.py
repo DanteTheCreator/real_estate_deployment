@@ -17,16 +17,21 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 try:
     from database import (
-        Property, PropertyImage, PropertyParameter, PropertyPrice,
-        Parameter, User, SessionLocal
+        Property, PropertyParameter, Parameter, User, SessionLocal
     )
+    # Import database models with aliases to avoid confusion
+    from database import PropertyImage as DBPropertyImage
+    from database import PropertyPrice as DBPropertyPrice
 except ImportError:
     # Fallback for direct execution
     import sys
     sys.path.append('/app')
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+    from database import (
+        Property, PropertyParameter, Parameter, User, SessionLocal
+    )
+    # Import database models with aliases to avoid confusion
+    from database import PropertyImage as DBPropertyImage
+    from database import PropertyPrice as DBPropertyPrice
 
 from database import (
     Property, PropertyImage, PropertyParameter, PropertyPrice,
@@ -109,14 +114,21 @@ class DatabaseService:
             
             self.logger.debug(f"✅ Property {property_id} main record created with DB ID: {property_obj.id}")
             
+            # Create parameter definitions first if we have raw parameter data
+            if hasattr(property_data, 'raw_parameters') and property_data.raw_parameters:
+                self.logger.info(f"🏗️ Creating parameter definitions for property {property_id}")
+                for param_data in property_data.raw_parameters:
+                    if isinstance(param_data, dict):
+                        self._ensure_parameter_exists(db, param_data)
+            
             # Add related records
-            self.logger.debug(f"📷 Saving {len(property_data.images)} images for property {property_id}")
+            self.logger.info(f"📷 Saving {len(property_data.images)} images for property {property_id}")
             self._save_property_images(db, property_obj.id, property_data.images)
             
-            self.logger.debug(f"🏷️ Saving {len(property_data.parameters)} parameters for property {property_id}")
+            self.logger.info(f"🏷️ Saving {len(property_data.parameters)} parameters for property {property_id}")
             self._save_property_parameters(db, property_obj.id, property_data.parameters)
             
-            self.logger.debug(f"💰 Saving {len(property_data.prices)} prices for property {property_id}")
+            self.logger.info(f"💰 Saving {len(property_data.prices)} prices for property {property_id}")
             self._save_property_prices(db, property_obj.id, property_data.prices)
             
             db.commit()
@@ -142,11 +154,12 @@ class DatabaseService:
     
     def _save_property_images(self, db: Session, property_id: int, images: List) -> None:
         """Save property images."""
-        for image in images:
+        for idx, image in enumerate(images):
             image_data = image.to_dict()
             image_data['property_id'] = property_id
             
-            property_image = PropertyImage(**image_data)
+            # Use the database model class (DBPropertyImage, not PropertyImage)
+            property_image = DBPropertyImage(**image_data)
             db.add(property_image)
     
     def _save_property_parameters(self, db: Session, property_id: int, parameters: List) -> None:
@@ -159,6 +172,7 @@ class DatabaseService:
             existing_param = db.query(Parameter).filter(Parameter.external_id == parameter_external_id).first()
             
             if not existing_param:
+                self.logger.info(f"Creating new parameter with external_id: {parameter_external_id}")
                 # Create basic parameter record if it doesn't exist
                 existing_param = Parameter(
                     external_id=parameter_external_id,
@@ -181,28 +195,38 @@ class DatabaseService:
     
     def _save_property_prices(self, db: Session, property_id: int, prices: List) -> None:
         """Save property prices."""
-        for price in prices:
+        for idx, price in enumerate(prices):
             price_data = price.to_dict()
             price_data['property_id'] = property_id
             
-            property_price = PropertyPrice(**price_data)
+            # Use the database model class (DBPropertyPrice, not PropertyPrice)
+            property_price = DBPropertyPrice(**price_data)
             db.add(property_price)
     
-    def _ensure_parameter_exists(self, db: Session, external_id: int) -> Parameter:
-        """Ensure parameter exists in database."""
+    def _ensure_parameter_exists(self, db: Session, param_data: dict) -> Parameter:
+        """Ensure parameter exists in database with full API data."""
+        external_id = param_data.get('id')
         existing_param = db.query(Parameter).filter(Parameter.external_id == external_id).first()
         
         if not existing_param:
-            # Create basic parameter record
+            # Create parameter record with full API data
             parameter = Parameter(
                 external_id=external_id,
-                key=f'param_{external_id}',
-                sort_index=0,
-                parameter_type='parameter',
-                display_name=f'Parameter {external_id}'
+                key=param_data.get('key', f'param_{external_id}'),
+                sort_index=param_data.get('sort_index', 0),
+                deal_type_id=param_data.get('deal_type_id'),
+                input_name=param_data.get('input_name'),
+                select_name=param_data.get('select_name'),
+                svg_file_name=param_data.get('svg_file_name'),
+                background_color=param_data.get('background_color'),
+                parameter_type=param_data.get('type', 'parameter'),
+                display_name=param_data.get('display_name', f'Parameter {external_id}'),
+                display_name_en=None,  # TODO: Add if multilingual support needed
+                display_name_ru=None   # TODO: Add if multilingual support needed
             )
             db.add(parameter)
             db.flush()
+            self.logger.info(f"Created parameter: {parameter.key} ({parameter.display_name})")
             return parameter
         
         return existing_param

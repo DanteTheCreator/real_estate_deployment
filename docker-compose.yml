@@ -176,22 +176,14 @@ services:
   # Production Scraper (Refactored)
   scraper:
     build:
-      context: .
-      dockerfile: ./back-end/scraper/Dockerfile.production
+      context: ./back-end
+      dockerfile: scraper/Dockerfile.production
       args:
         - BUILD_ENV=production
     container_name: comfyrent-scraper
     env_file:
       - .env.production
     environment:
-      # Scraper configuration
-      - MAX_PROPERTIES=50000
-      - BATCH_SIZE=50
-      - SCRAPE_INTERVAL=15  # Run every 15 seconds as requested
-      - SCRAPE_MODE=incremental
-      - REPORT_FORMAT=json
-      - RUN_ONCE=false
-      - PER_PAGE=10000  # 10,000 listings per page as requested
       # Database connection
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
@@ -220,6 +212,53 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    # Container handles startup automatically via Dockerfile
+
+  # Multilingual Content Processor (Separate Worker)
+  multilingual_worker:
+    build:
+      context: ./back-end
+      dockerfile: scraper/Dockerfile.multilingual
+      args:
+        - BUILD_ENV=production
+    container_name: comfyrent-multilingual-worker
+    env_file:
+      - .env.production
+    environment:
+      # Worker configuration
+      - BATCH_SIZE=10
+      - CHECK_INTERVAL=300  # Check every 5 minutes
+      - MODE=new
+      # Database connection
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=comfyrent_production
+      - POSTGRES_USER=comfyrent_user
+      # Logging
+      - LOG_LEVEL=INFO
+      # Enable multilingual processing for this worker
+      - SCRAPER_CONCURRENT_LANGUAGES=true
+    secrets:
+      - postgres_password
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - comfyrent-network
+    restart: unless-stopped
+    volumes:
+      - multilingual_logs:/app/logs
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # Container handles startup automatically via Dockerfile
 
 # Production Secrets
 secrets:
@@ -251,4 +290,6 @@ volumes:
   scraper_logs:
     driver: local
   scraper_data:
+    driver: local
+  multilingual_logs:
     driver: local

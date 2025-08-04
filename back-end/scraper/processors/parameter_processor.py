@@ -36,10 +36,7 @@ class ParameterProcessor:
         try:
             parameters_data = raw_data.get('parameters', [])
             if not parameters_data:
-                self.logger.debug(f"No parameters found for property {property_data.external_id}")
                 return
-            
-            self.logger.debug(f"Processing {len(parameters_data)} parameters for property {property_data.external_id}")
             
             for param_data in parameters_data:
                 if not isinstance(param_data, dict):
@@ -62,9 +59,8 @@ class ParameterProcessor:
                 )
                 
                 property_data.parameters.append(property_parameter)
-                self.logger.debug(f"Added parameter: {param_key} (external_id: {param_external_id}) for property {property_data.external_id}")
             
-            self.logger.debug(f"Successfully processed {len(property_data.parameters)} parameters for property {property_data.external_id}")
+            self.logger.info(f"Successfully processed {len(property_data.parameters)} parameters for property {property_data.external_id}")
             
         except Exception as e:
             self.logger.error(f"Error processing parameters for property {property_data.external_id}: {e}")

@@ -22,7 +22,7 @@ class PropertyImage:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         return {
-            'image_url': self.url,
+            'image_url': self.url,  # Database expects 'image_url' field
             'caption': self.caption,
             'is_primary': self.is_primary,
             'order_index': self.order_index
@@ -134,6 +134,7 @@ class PropertyData:
     images: List[PropertyImage] = None
     parameters: List[PropertyParameter] = None
     prices: List[PropertyPrice] = None
+    raw_parameters: List[Dict] = None  # Store raw parameter data for database parameter creation
     
     def __post_init__(self):
         """Initialize related data lists."""
@@ -143,6 +144,8 @@ class PropertyData:
             self.parameters = []
         if self.prices is None:
             self.prices = []
+        if self.raw_parameters is None:
+            self.raw_parameters = []
     
     def add_image(self, url: str, **kwargs) -> PropertyImage:
         """Add an image to the property."""

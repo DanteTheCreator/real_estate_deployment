@@ -38,7 +38,6 @@ class ImageProcessor:
         try:
             images_data = raw_data.get('images', [])
             if not images_data:
-                self.logger.debug(f"No images found for property {property_data.external_id}")
                 return
             
             processed_count = 0
@@ -58,7 +57,6 @@ class ImageProcessor:
                 
                 # Skip duplicate images if enabled
                 if self.config.enable_deduplication and self._is_duplicate_image(image_url):
-                    self.logger.debug(f"Skipping duplicate image: {image_url}")
                     continue
                 
                 # Create PropertyImage object
@@ -80,7 +78,7 @@ class ImageProcessor:
                 property_data.images.append(property_image)
                 processed_count += 1
             
-            self.logger.debug(f"Processed {processed_count} images for property {property_data.external_id}")
+            self.logger.info(f"Processed {processed_count} images for property {property_data.external_id}")
             
         except Exception as e:
             self.logger.error(f"Error processing images for property {property_data.external_id}: {e}")
@@ -130,8 +128,8 @@ class ImageProcessor:
             file_path = property_dir / filename
             
             # Skip if already downloaded
-            if file_path.exists():
-                self.logger.debug(f"Image already exists: {file_path}")
+            if path.exists(file_path):
+                return
                 return str(file_path)
             
             # Download image
@@ -144,7 +142,6 @@ class ImageProcessor:
                     if chunk:
                         f.write(chunk)
             
-            self.logger.debug(f"Downloaded image: {file_path}")
             return str(file_path)
             
         except Exception as e:

@@ -31,7 +31,6 @@ class PriceProcessor:
         try:
             price_data = raw_data.get('price', {})
             if not price_data:
-                self.logger.debug(f"No price data found for property {property_data.external_id}")
                 return
             
             # Track primary prices for main fields
@@ -84,10 +83,8 @@ class PriceProcessor:
                 # No valid prices found
                 property_data.rent_amount = 0
                 property_data.rent_amount_usd = 0
-                
-            self.logger.debug(f"Processed prices for property {property_data.external_id}: GEL={gel_price}, USD={usd_price}")
             
-            self.logger.debug(f"Processed {len(property_data.prices)} price records for property {property_data.external_id}")
+            self.logger.info(f"Processed {len(property_data.prices)} price records for property {property_data.external_id}")
             
         except Exception as e:
             self.logger.error(f"Error processing prices for property {property_data.external_id}: {e}")

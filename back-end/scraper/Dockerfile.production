@@ -21,7 +21,7 @@ RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy and install requirements
-COPY back-end/requirements.txt /tmp/
+COPY requirements.txt /tmp/
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 # Production stage
@@ -48,39 +48,46 @@ COPY --from=builder /opt/venv /opt/venv
 # Set working directory
 WORKDIR /app
 
-# Create necessary directories
-RUN mkdir -p /app/logs /app/data/reports /app/data/property_images
+# Create necessary directories and set proper permissions
+RUN mkdir -p /app/logs /app/data/reports /app/data/property_images && \
+    chown -R scraper:scraper /app
 
-# Copy backend database modules (required dependencies)
-COPY --chown=scraper:scraper back-end/database.py .
-COPY --chown=scraper:scraper back-end/schemas.py .
-COPY --chown=scraper:scraper back-end/config.py .
+# Copy application files
+COPY --chown=scraper:scraper database.py .
+COPY --chown=scraper:scraper schemas.py .
+COPY --chown=scraper:scraper config.py .
+COPY --chown=scraper:scraper scraper/ ./scraper/
 
-# Copy the refactored scraper
-COPY --chown=scraper:scraper back-end/scraper/ ./scraper/
-
-# Copy configuration
-COPY --chown=scraper:scraper back-end/scraper/config.docker.yaml ./config.yaml
-
-# No entrypoint script needed - run myhome_scraper.py directly
+# Create startup script
+RUN echo '#!/bin/bash\n\
+set -e\n\
+echo "🚀 Starting ComfyRent MAXIMUM SPEED Scraper..."\n\
+echo "⚡ Maximum Speed Mode: NO LIMITS, NO BATCHING"\n\
+echo ""\n\
+cd /app/scraper\n\
+exec python3 myhome_scraper.py "$@"' > /app/start-scraper.sh && \
+    chmod +x /app/start-scraper.sh && \
+    chown scraper:scraper /app/start-scraper.sh
 
 # Switch to non-root user
 USER scraper
 
-# Set working directory to scraper
-WORKDIR /app/scraper
+# Set working directory
+WORKDIR /app
 
-# Health check
-HEALTHCHECK --interval=60s --timeout=30s --start-period=60s --retries=3 \
+# Health check - check if scraper process is running
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD pgrep -f "python.*myhome_scraper.py" || exit 1
 
-# Default environment variables
-ENV MAX_PROPERTIES=1000 \
+# Default environment variables for production
+ENV MAX_PROPERTIES=50000 \
     BATCH_SIZE=50 \
-    SCRAPE_INTERVAL=3600 \
-    SCRAPE_MODE=incremental \
+    SCRAPE_INTERVAL=15 \
+    SCRAPE_MODE=continuous \
     REPORT_FORMAT=json \
-    RUN_ONCE=false
+    RUN_ONCE=false \
+    SCRAPER_CONCURRENT_LANGUAGES=false
 
-# Run myhome_scraper.py directly
-CMD ["python3", "myhome_scraper.py"]
+# Use the startup script as entrypoint
+ENTRYPOINT ["/app/start-scraper.sh"]
+CMD []

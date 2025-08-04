@@ -28,11 +28,8 @@ class DataProcessor:
         self.logger = logging.getLogger(self.__class__.__name__)
     
     def process_property(self, raw_data: Dict) -> Optional[PropertyData]:
-        """Convert raw property data to PropertyData object."""
+        """Convert raw property data to PropertyData object - SPEED OPTIMIZED."""
         try:
-            property_id = raw_data.get('id', 'unknown')
-            self.logger.info(f"🏠 Starting to process property {property_id}")
-            
             # Create PropertyData instance with basic info
             basic_info = self._process_basic_info(raw_data)
             property_data = PropertyData(**basic_info)
@@ -40,51 +37,47 @@ class DataProcessor:
             # Process different aspects of the property
             self._process_location(property_data, raw_data)
             self._process_property_details(property_data, raw_data)
-            self._process_basic_financial(property_data, raw_data)
+            self._process_basic_financial(raw_data, property_data)
             self._process_features(property_data, raw_data)
             self._process_building_details(property_data, raw_data)
+            self._process_photos(property_data, raw_data)
             
             # Set user type (owner vs agency)
-            user_type = self._determine_user_type(raw_data)
-            property_data.user_type = user_type
-            
-            # Final logging of key values
-            self.logger.info(f"✅ Property {property_id} processed successfully:")
-            self.logger.info(f"   - is_available: {property_data.is_available}")
-            self.logger.info(f"   - bathrooms: {property_data.bathrooms}")
-            self.logger.info(f"   - bedrooms: {property_data.bedrooms}")
-            self.logger.info(f"   - listing_type: {property_data.listing_type}")
-            self.logger.info(f"   - property_type: {property_data.property_type}")
+            property_data.user_type = self._determine_user_type(raw_data)
             
             return property_data
             
         except Exception as e:
-            self.logger.error(f"❌ Error processing property data for {raw_data.get('id', 'unknown')}: {e}")
+            self.logger.error(f"Error processing property {raw_data.get('id', 'unknown')}: {e}")
             return None
     
     def _process_basic_info(self, raw_data: Dict) -> Dict:
         """Process basic property information."""
-        return {
+        title = raw_data.get('dynamic_title', '')
+        if not title:  # Fallback to other title fields
+            title = raw_data.get('title', '') or raw_data.get('dynamic_slug', '') or f"Property {raw_data.get('id', 'Unknown')}"
+        
+        result = {
             'external_id': str(raw_data.get('id', '')),
-            'title': raw_data.get('dynamic_title', ''),
+            'title': title,
             'description': raw_data.get('comment', ''),  # Description is in 'comment' field
             'created_at': self._parse_datetime(raw_data.get('created_at')),
-            'updated_at': self._parse_datetime(raw_data.get('last_updated'))
+            'updated_at': self._parse_datetime(raw_data.get('last_updated')),
+            'source': 'myhome.ge'
         }
+        
+        return result
     
     def _process_location(self, property_data: PropertyData, raw_data: Dict) -> None:
-        """Process location information."""
-        property_id = raw_data.get('id', 'unknown')
-        
-        # Location - use 'address' field from API (not 'street_address')
+        """Process location information - SPEED OPTIMIZED."""
+        # Location - use 'address' field from API
         raw_address = raw_data.get('address', '')
         
-        # More comprehensive address extraction - check different possible fields
+        # Try alternative address field names if needed
         if not raw_address:
-            # Try alternative address field names
             raw_address = raw_data.get('street_address', '') or raw_data.get('full_address', '')
         
-        # If still no address, try to construct one from street info
+        # Construct from street info if still empty
         if not raw_address:
             street_name = raw_data.get('street_name', '')
             house_number = raw_data.get('house_number', '') or raw_data.get('building_number', '')
@@ -92,26 +85,20 @@ class DataProcessor:
                 raw_address = f"{street_name} {house_number}".strip()
         
         property_data.address = raw_address
-        
-        # Enhanced logging for address processing
-        if raw_address:
-            self.logger.info(f"📍 Property {property_id}: Found address '{raw_address}'")
-        else:
-            self.logger.warning(f"⚠️  Property {property_id}: No address found in raw data")
-            # Log all available keys to debug
-            address_related_keys = [k for k in raw_data.keys() if any(term in k.lower() for term in ['addr', 'street', 'house', 'building', 'location'])]
-            self.logger.warning(f"🔍 Available address-related fields: {address_related_keys}")
-            
-            # Log the first few keys to see the structure
-            all_keys = list(raw_data.keys())[:15]
-            self.logger.warning(f"🔍 First 15 raw data keys: {all_keys}")
-        
-        property_data.city = raw_data.get('city_name') or 'Tbilisi'  # Ensure city is never None
-        property_data.state = raw_data.get('district_name') or 'Georgia'  # Ensure state is never None
+        property_data.city = raw_data.get('city_name') or 'Tbilisi'
+        property_data.state = raw_data.get('district_name') or 'Georgia'
         property_data.district = raw_data.get('district_name')
         property_data.urban_area = raw_data.get('urban_name')
         
-        # Coordinates - use lat/lng from API response
+        # Add metro station information to utilities_included if available
+        metro_station = raw_data.get('metro_station')
+        if metro_station:
+            if property_data.utilities_included:
+                property_data.utilities_included += f", Metro: {metro_station}"
+            else:
+                property_data.utilities_included = f"Metro: {metro_station}"
+        
+        # Coordinates
         lat = raw_data.get('lat')
         lng = raw_data.get('lng')
         if lat is not None and lng is not None:
@@ -119,9 +106,7 @@ class DataProcessor:
             property_data.longitude = float(lng)
     
     def _process_property_details(self, property_data: PropertyData, raw_data: Dict) -> None:
-        """Process property physical details."""
-        property_id = raw_data.get('id', 'unknown')
-        
+        """Process property physical details - SPEED OPTIMIZED."""
         # Set property type based on real_estate_type_id
         property_type_id = raw_data.get('real_estate_type_id')
         if property_type_id == 1:
@@ -135,17 +120,12 @@ class DataProcessor:
         
         # Set listing type based on deal_type_id
         deal_type_id = raw_data.get('deal_type_id')
-        self.logger.info(f"🏷️  Processing deal_type_id for property {property_id}: {deal_type_id}")
-        
         if deal_type_id == 1:
             property_data.listing_type = 'sale'
-            self.logger.info(f"✅ Set listing_type='sale' for property {property_id}")
         elif deal_type_id == 2:
             property_data.listing_type = 'rent'
-            self.logger.info(f"✅ Set listing_type='rent' for property {property_id}")
         else:
-            property_data.listing_type = 'rent'  # Default since we're focusing on rentals
-            self.logger.info(f"🔧 Set default listing_type='rent' for property {property_id} (deal_type_id: {deal_type_id})")
+            property_data.listing_type = 'rent'  # Default
         
         # Convert bedroom and room from strings to integers
         bedroom = raw_data.get('bedroom', '1')
@@ -162,40 +142,109 @@ class DataProcessor:
         
         property_data.bedrooms = bedroom
         property_data.bathrooms = self._extract_bathroom_count(raw_data)
-        property_data.square_feet = self._safe_int(raw_data.get('area'))  # 'area' field
+        property_data.square_feet = self._safe_int(raw_data.get('area'))
         property_data.lot_size = self._safe_float(raw_data.get('yard_area'))
-    
-    def _process_basic_financial(self, property_data: PropertyData, raw_data: Dict) -> None:
-        """Process basic financial information."""
-        # Process main price - could be sale price or rent amount
-        price = self._safe_float(raw_data.get('price'))
-        if price > 0:
-            property_data.rent_amount = price
         
-        # Process additional financial fields
-        property_data.security_deposit = self._safe_float(raw_data.get('security_deposit'))
-        property_data.lease_duration = self._safe_int(raw_data.get('lease_duration'), 12)
+        # Store total rooms count if needed (could be used in utilities_included or other field)
+        if room != bedroom:
+            # Store room count information in description or utilities_included if different
+            property_data.utilities_included = f"Total rooms: {room}"
+    
+    def _process_basic_financial(self, raw_data: Dict, property_data: PropertyData) -> None:
+        """Process basic financial information."""
+        # Handle price structure from API response
+        price_data = raw_data.get('price', {})
+        # FROM EXAMPLE: "1": 1081 (high=GEL), "2": 400 (low=USD), "3": 346 (lowest=EUR)
+        currency_map = {1: 'GEL', 2: 'USD', 3: 'EUR'}  # FINAL CORRECT MAPPING
+        
+        # Extract price from the price structure
+        if isinstance(price_data, dict):
+            # Currency 1 = GEL (higher values like 1081)
+            gel_price_info = price_data.get('1')
+            # Currency 2 = USD (lower values like 400)
+            usd_price_info = price_data.get('2')
+            
+            # Set GEL amount (primary currency - higher values)
+            if gel_price_info and isinstance(gel_price_info, dict):
+                gel_price_total = gel_price_info.get('price_total', 0)
+                if gel_price_total and gel_price_total > 0:
+                    property_data.rent_amount = gel_price_total
+            
+            # Set USD amount (secondary currency - lower values)
+            if usd_price_info and isinstance(usd_price_info, dict):
+                usd_price_total = usd_price_info.get('price_total', 0)
+                if usd_price_total and usd_price_total > 0:
+                    property_data.rent_amount_usd = usd_price_total
+            
+            # Fallback: if no GEL price but have other currencies, use the first available
+            if property_data.rent_amount == 0.0 and price_data:
+                fallback_price_info = next(iter(price_data.values()))
+                if fallback_price_info and isinstance(fallback_price_info, dict):
+                    fallback_price_total = fallback_price_info.get('price_total', 0)
+                    if fallback_price_total and fallback_price_total > 0:
+                        property_data.rent_amount = fallback_price_total
+        
+        # Process all price currencies for the prices list
+        self._process_all_prices(raw_data, property_data)
+    
+    def _process_all_prices(self, raw_data: Dict, property_data: PropertyData) -> None:
+        """Process all price currencies to populate the prices list."""
+        price_data = raw_data.get('price', {})
+        if not isinstance(price_data, dict):
+            return
+        
+        # Process each currency in the price data
+        for currency_id, price_info in price_data.items():
+            if isinstance(price_info, dict):
+                price_total = price_info.get('price_total', 0)
+                price_square = price_info.get('price_square', 0)
+                
+                if price_total and price_total > 0:
+                    # Create PropertyPrice object using direct instantiation
+                    property_price = type('PropertyPrice', (), {
+                        'currency_type': str(currency_id),
+                        'price_total': float(price_total),
+                        'price_square': float(price_square) if price_square else 0.0,
+                        'to_dict': lambda self: {
+                            'currency_type': self.currency_type,
+                            'price_total': self.price_total,
+                            'price_square': self.price_square
+                        }
+                    })()
+                    property_data.prices.append(property_price)
     
     def _process_features(self, property_data: PropertyData, raw_data: Dict) -> None:
-        """Process property features."""
-        property_id = property_data.external_id
-        self.logger.debug(f"🎯 Processing features for property {property_id}")
+        """Process property features - SPEED OPTIMIZED."""
+        # Mark all properties as available since we're scraping active listings
+        property_data.is_available = True
         
-        # Status mapping: 1 = active, 2 = sold/rented, 3 = inactive
-        status_id = raw_data.get('status_id', 1)
-        self.logger.debug(f"📊 Raw status_id for {property_id}: {status_id}")
+        # Analyze parameters to determine features
+        parameters = raw_data.get('parameters', [])
+        furnished_indicators = ['furniture', 'furnished', 'appliance']
+        pet_indicators = ['pet', 'animal']
         
-        # Mark all properties as available for rental listings
-        property_data.is_available = True  # Always mark as available since we're scraping active listings
-        self.logger.info(f"✅ Setting is_available=True for property {property_id}")
+        property_data.is_furnished = False
+        property_data.pets_allowed = False
         
-        # These fields are not explicitly in the JSON, so set defaults
-        property_data.is_furnished = False  # Default - would need to check parameters
-        property_data.pets_allowed = False  # Default - would need to check parameters  
-        property_data.smoking_allowed = False  # Default - would need to check parameters
-        property_data.utilities_included = ''  # Default - would need to check parameters
+        if isinstance(parameters, list):
+            for param in parameters:
+                if isinstance(param, dict):
+                    key = param.get('key', '').lower()
+                    display_name = param.get('display_name', '').lower()
+                    
+                    # Check for furnished indicators
+                    if any(indicator in key or indicator in display_name for indicator in furnished_indicators):
+                        property_data.is_furnished = True
+                    
+                    # Check for pet indicators
+                    if any(indicator in key or indicator in display_name for indicator in pet_indicators):
+                        property_data.pets_allowed = True
         
-        self.logger.debug(f"🏠 Features set for {property_id}: furnished={property_data.is_furnished}, pets={property_data.pets_allowed}, smoking={property_data.smoking_allowed}")
+        # Set defaults for other features
+        property_data.smoking_allowed = False  # Most rentals don't allow smoking
+        
+        # Process parameters from API response
+        self._process_parameters(property_data, raw_data)
     
     def _process_building_details(self, property_data: PropertyData, raw_data: Dict) -> None:
         """Process building-specific details."""
@@ -203,9 +252,42 @@ class DataProcessor:
         property_data.parking_spaces = self._safe_int(raw_data.get('parking'), 0)
         property_data.floor_number = self._safe_int(raw_data.get('floor'))
         property_data.total_floors = self._safe_int(raw_data.get('total_floors'))
+        
+        # Store additional information in utilities_included
+        additional_info = []
+        
+        # VIP status information
+        if raw_data.get('is_vip'):
+            additional_info.append("VIP listing")
+        if raw_data.get('is_super_vip'):
+            additional_info.append("Super VIP listing")
+        
+        # Property features
+        if raw_data.get('has_3d'):
+            additional_info.append("3D tour available")
+        
+        # Price negotiability
+        if raw_data.get('price_negotiable'):
+            additional_info.append("Price negotiable")
+        if raw_data.get('price_from'):
+            additional_info.append("Price from")
+        
+        # Days on market
+        quantity_of_day = raw_data.get('quantity_of_day')
+        if quantity_of_day:
+            additional_info.append(f"Listed {quantity_of_day} days ago")
+        
+        # Add to utilities_included if we have additional info
+        if additional_info:
+            additional_info_str = "; ".join(additional_info)
+            if property_data.utilities_included:
+                property_data.utilities_included += f"; {additional_info_str}"
+            else:
+                property_data.utilities_included = additional_info_str
     
     def _determine_user_type(self, raw_data: Dict) -> str:
         """Determine if listing is from owner or agency."""
+        # Check user_type field first
         user_type_data = raw_data.get('user_type', {})
         
         if isinstance(user_type_data, dict):
@@ -218,16 +300,29 @@ class DataProcessor:
             if any(indicator in user_type for indicator in agency_indicators):
                 return 'agency'
         
+        # Check for agency-specific fields
+        user_title = raw_data.get('user_title', '')
         agency_fields = ['agency_name', 'company_name', 'broker_name']
         has_agency_info = any(raw_data.get(field) for field in agency_fields)
+        
+        # If user_title contains agency-related terms
+        agency_terms = ['agency', 'realtor', 'broker', 'company', 'estate']
+        if user_title and any(term in user_title.lower() for term in agency_terms):
+            return 'agency'
         
         contact_info = raw_data.get('contact', {})
         has_direct_contact = bool(contact_info.get('phone') or contact_info.get('email'))
         
+        # Default logic: if no agency info and has direct contact, likely owner
         if not has_agency_info and has_direct_contact:
             return 'owner'
         
-        return 'agency'
+        # Check if user has many listings (agencies typically have more listings)
+        user_statements_count = raw_data.get('user_statements_count', 0)
+        if user_statements_count > 5:  # Agencies typically have many listings
+            return 'agency'
+        
+        return 'agency'  # Default to agency to be safe
     
     def _parse_datetime(self, date_str: Optional[str]) -> Optional[datetime]:
         """Parse datetime string safely."""
@@ -271,14 +366,10 @@ class DataProcessor:
             return default
     
     def _extract_bathroom_count(self, raw_data: Dict) -> float:
-        """Extract bathroom count from parameters or set default."""
-        property_id = raw_data.get('id', 'unknown')
-        self.logger.debug(f"🚿 Extracting bathroom count for property {property_id}")
-        
+        """Extract bathroom count - SPEED OPTIMIZED."""
         try:
             # Check parameters for bathroom-related fields
             parameters = raw_data.get('parameters', [])
-            self.logger.debug(f"🔍 Found {len(parameters) if parameters else 0} parameters for {property_id}")
             
             if isinstance(parameters, list):
                 for param in parameters:
@@ -288,24 +379,81 @@ class DataProcessor:
                         
                         # Look for bathroom-related keys
                         if 'bathroom' in key or 'toilet' in key or 'wc' in key:
-                            self.logger.info(f"🎯 Found bathroom parameter for {property_id}: {key}={value}")
                             bathroom_count = self._safe_float(value, 1.0)
                             if bathroom_count > 0:
-                                self.logger.info(f"✅ Extracted bathroom count for {property_id}: {bathroom_count}")
                                 return bathroom_count
             
-            # Check direct fields (if any)
+            # Check direct fields
             bathroom_field = raw_data.get('bathroom')
             if bathroom_field:
-                self.logger.info(f"🎯 Found direct bathroom field for {property_id}: {bathroom_field}")
                 return self._safe_float(bathroom_field, 1.0)
             
-            # Default based on bedrooms (usually 1 bathroom per bedroom + 1)
+            # Default based on bedrooms
             bedrooms = self._safe_int(raw_data.get('bedroom', '1'))
-            default_bathrooms = max(1.0, float(bedrooms) * 0.5)  # Reasonable estimate
-            self.logger.debug(f"🔧 Using default bathroom count for {property_id}: {default_bathrooms} (based on {bedrooms} bedrooms)")
-            return default_bathrooms
+            return max(1.0, float(bedrooms) * 0.5)
             
-        except Exception as e:
-            self.logger.error(f"❌ Error extracting bathroom count for {property_id}: {e}")
+        except Exception:
             return 1.0  # Safe default
+
+    def _process_photos(self, property_data: PropertyData, raw_data: Dict) -> None:
+        """Process property photos from API response."""
+        images = raw_data.get('images', [])
+        if not images or not isinstance(images, list):
+            return
+        
+        # Process each image from the API response
+        for idx, image in enumerate(images):
+            if isinstance(image, dict):
+                # Get the large image URL (highest quality)
+                large_url = image.get('large')
+                if large_url:
+                    # Clean up the URL (remove escape characters)
+                    clean_url = large_url.replace('\\/', '/')
+                    
+                    # Check if this is the main photo
+                    is_main = image.get('is_main', False)
+                    
+                    # Create PropertyImage object using direct instantiation
+                    property_image = type('PropertyImage', (), {
+                        'url': clean_url,
+                        'caption': None,
+                        'is_primary': is_main,
+                        'order_index': idx,
+                        'blur_url': image.get('blur', '').replace('\\/', '/') if image.get('blur') else None,
+                        'thumbnail_url': image.get('thumb', '').replace('\\/', '/') if image.get('thumb') else None,
+                        'to_dict': lambda self: {
+                            'image_url': self.url,
+                            'caption': self.caption,
+                            'is_primary': self.is_primary,
+                            'order_index': self.order_index
+                        }
+                    })()
+                    property_data.images.append(property_image)
+    
+    def _process_parameters(self, property_data: PropertyData, raw_data: Dict) -> None:
+        """Process property parameters from API response."""
+        parameters = raw_data.get('parameters', [])
+        if not parameters or not isinstance(parameters, list):
+            return
+            
+        # Store the full parameter data for later database parameter creation
+        property_data.raw_parameters = parameters
+        
+        # Process each parameter from the API response
+        for param in parameters:
+            if isinstance(param, dict):
+                param_id = param.get('id')
+                if param_id:
+                    # Create PropertyParameter object for database storage
+                    # Use direct class instantiation instead of imports
+                    property_parameter = type('PropertyParameter', (), {
+                        'parameter_id': param_id,
+                        'parameter_value': param.get('parameter_value'),
+                        'parameter_select_name': param.get('parameter_select_name'),
+                        'to_dict': lambda self: {
+                            'parameter_id': self.parameter_id,
+                            'parameter_value': self.parameter_value,
+                            'parameter_select_name': self.parameter_select_name
+                        }
+                    })()
+                    property_data.parameters.append(property_parameter)

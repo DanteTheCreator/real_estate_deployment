@@ -28,6 +28,12 @@ try:
     from .processors.multilingual_processor import MultilingualProcessor
     from .processors.parameter_processor import ParameterProcessor
     from .processors.price_processor import PriceProcessor
+    
+    # Import database models for bulk operations
+    import sys
+    import os
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from database import Property
     from .services.database_service import DatabaseService
     from .services.deduplication_service import DeduplicationService
     from .services.report_service import ReportService
@@ -45,6 +51,12 @@ except ImportError:
         from services.database_service import DatabaseService
         from services.deduplication_service import DeduplicationService
         from services.report_service import ReportService
+        
+        # Import database models for bulk operations  
+        import sys
+        import os
+        sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from database import Property
     except ImportError:
         from scraper.core.config import ScrapingConfig
         from scraper.core.base_scraper import BaseScraper
@@ -58,44 +70,46 @@ except ImportError:
         from scraper.services.database_service import DatabaseService
         from scraper.services.deduplication_service import DeduplicationService
         from scraper.services.report_service import ReportService
+        
+        # Import database models for bulk operations
+        import sys
+        import os
+        sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        from database import Property
 
 
 class MyHomeAdvancedScraper(BaseScraper):
     """Advanced MyHome.ge scraper with modular architecture."""
     
     def __init__(self, config: ScrapingConfig = None):
-        """Initialize the scraper with all components."""
+        """Initialize the MAXIMUM SPEED scraper."""
         if config is None:
             config = ScrapingConfig()
         
+        # Override config for MAXIMUM SPEED
+        config.max_properties = 999999999  # No limit
+        config.per_page = 1000  # Maximum per page
+        config.batch_size = 999999999  # No batching
+        
         super().__init__(config)
         
-        # Initialize processors
+        # Initialize only essential processors
         self.data_processor = DataProcessor(config)
-        self.multilingual_processor = MultilingualProcessor(config)
-        self.image_processor = ImageProcessor(config)
-        self.price_processor = PriceProcessor(config)
-        self.parameter_processor = ParameterProcessor(config)
         
-        # Initialize services
+        # Initialize only essential services
         self.database_service = DatabaseService(config)
         self.deduplication_service = DeduplicationService(config)
-        self.report_service = ReportService(config)
         
-        # Track seen property IDs to avoid reprocessing
+        # Track seen property IDs
         self.seen_property_ids = set()
         
-        # Create necessary directories
-        self.create_directories()
-        
-        self.logger.info("MyHome.ge Advanced Scraper initialized successfully")
+        self.logger.info("MAXIMUM SPEED scraper initialized - NO LIMITS")
     
-    async def scrape(self, property_type_filter: Optional[int] = None,
-                    deal_type_filter: Optional[int] = None) -> ScrapingStats:
-        """Main scraping method with full multilingual support."""
-        self.logger.info("Starting full scraping mode")
+    async def scrape(self) -> ScrapingStats:
+        """Main MAXIMUM SPEED scraping method - NO LIMITS."""
+        self.logger.info("Starting MAXIMUM SPEED scraping - NO BATCH LIMITS")
         
-        # Reset seen properties for this scraping cycle
+        # Reset seen properties
         self.seen_property_ids.clear()
         
         db = self.database_service.get_session()
@@ -103,54 +117,35 @@ class MyHomeAdvancedScraper(BaseScraper):
             # Create default user
             default_user = self.database_service.create_default_user(db)
             
-            # Cleanup old properties
-            cleaned = self.database_service.cleanup_old_properties(db)
-            self.stats.cleaned_old = cleaned
-            
-            # Start scraping
-            await self._scrape_properties(
-                db, default_user, property_type_filter, deal_type_filter
-            )
-            
-            # Cleanup orphaned images if enabled
-            if self.config.enable_image_download:
-                active_ids = self.database_service.get_active_property_ids(db)
-                self.image_processor.cleanup_orphaned_images(active_ids)
+            # Start MAXIMUM SPEED scraping
+            await self._scrape_properties(db, default_user)
             
         except Exception as e:
-            self.logger.error(f"Critical error in scraping process: {e}")
+            self.logger.error(f"Critical error in scraping: {e}")
             self.stats.errors += 1
             raise RuntimeError(f"Scraping failed: {e}")
         
         finally:
             db.close()
-            self.finalize()
         
         return self.stats
     
-    async def _scrape_properties(self, db: Session, default_user, 
-                               property_type_filter: Optional[int],
-                               deal_type_filter: Optional[int]) -> None:
-        """Scrape properties with pagination and processing."""
+    async def _scrape_properties(self, db: Session, default_user) -> None:
+        """MAXIMUM SPEED property scraping - NO LIMITS."""
         properties_processed = 0
         page = 1
         consecutive_empty_pages = 0
-        max_consecutive_empty = 3  # Stop after 3 consecutive empty pages
+        max_consecutive_empty = 3
         
-        # Create aiohttp session for multilingual extraction
         async with aiohttp.ClientSession() as async_session:
-            while properties_processed < self.config.max_properties and consecutive_empty_pages < max_consecutive_empty:
+            while consecutive_empty_pages < max_consecutive_empty:
                 try:
                     # Fetch properties page
-                    data = await self._fetch_properties_page(
-                        page, property_type_filter, deal_type_filter
-                    )
+                    data = await self._fetch_properties_page(page)
                     
                     if not data or not data.get('data'):
                         consecutive_empty_pages += 1
-                        self.logger.info(f"📭 Page {page}: No data returned (consecutive empty: {consecutive_empty_pages})")
                         if consecutive_empty_pages >= max_consecutive_empty:
-                            self.logger.info(f"🛑 Stopping after {max_consecutive_empty} consecutive empty pages")
                             break
                         page += 1
                         continue
@@ -159,69 +154,42 @@ class MyHomeAdvancedScraper(BaseScraper):
                     
                     if len(properties) == 0:
                         consecutive_empty_pages += 1
-                        self.logger.info(f"📭 Page {page}: Empty page (consecutive empty: {consecutive_empty_pages})")
                         if consecutive_empty_pages >= max_consecutive_empty:
-                            self.logger.info(f"🛑 Stopping after {max_consecutive_empty} consecutive empty pages")
                             break
                         page += 1
                         continue
                     
-                    # Reset consecutive empty counter when we get data
                     consecutive_empty_pages = 0
-                    
                     self.stats.total_fetched += len(properties)
-                    self.logger.info(f"🔄 Page {page}: Fetched {len(properties)} properties")
                     
-                    # Process each property
-                    processed_in_page = 0
-                    new_properties_in_page = 0
+                    # Filter new properties ULTRA-FAST
+                    new_properties = []
                     for raw_property in properties:
-                        try:
-                            property_id = raw_property.get('id')
-                            if property_id and str(property_id) in self.seen_property_ids:
-                                self.logger.debug(f"🔄 Skipping already processed property {property_id} in this cycle")
-                                continue
-                            
-                            if property_id:
-                                self.seen_property_ids.add(str(property_id))
-                                new_properties_in_page += 1
-                            
-                            await self._process_single_property(
-                                db, async_session, raw_property, default_user
-                            )
-                            processed_in_page += 1
-                                
-                        except Exception as e:
-                            self.logger.error(f"Error processing property {raw_property.get('id', 'unknown')}: {e}")
-                            self.stats.errors += 1
-                            continue
+                        property_id = raw_property.get('id')
+                        if property_id and str(property_id) not in self.seen_property_ids:
+                            self.seen_property_ids.add(str(property_id))
+                            new_properties.append(raw_property)
+                    
+                    self.logger.info(f"Page {page}: {len(new_properties)}/{len(properties)} new properties")
+                    
+                    if new_properties:
+                        # Process ALL properties from this page at MAXIMUM SPEED
+                        processed_count = await self._process_properties_batch(
+                            db, async_session, new_properties, default_user
+                        )
                     
                     properties_processed += len(properties)
                     
-                    self.logger.info(f"📋 Page {page}: Processed {processed_in_page}/{len(properties)} properties")
-                    
-                    # If we're not getting any new properties, we might be repeating data
-                    if new_properties_in_page == 0:
-                        self.logger.warning(f"⚠️ Page {page}: All properties already seen - API repeating data")
+                    # Check for repeated data
+                    if len(new_properties) == 0:
                         consecutive_empty_pages += 1
                         if consecutive_empty_pages >= max_consecutive_empty:
-                            self.logger.info(f"🛑 Stopping due to repeated data")
                             break
                     
-                    # Progress logging
-                    if properties_processed % 1000 == 0:
-                        self.logger.info(f"📊 Total progress: {properties_processed} properties processed")
-                    
-                    # Move to next page
                     page += 1
                     
-                    # Respect rate limits
-                    await asyncio.sleep(self.config.delay_between_requests)
-                    
-                    # Check if we got fewer properties than requested (might be last page)
-                    per_page = getattr(self.config, 'per_page', 1000)
-                    if len(properties) < per_page:
-                        self.logger.info(f"🛑 Received {len(properties)} properties (less than {per_page} requested) - likely last page")
+                    # Check if fewer properties than requested (last page)
+                    if len(properties) < self.config.per_page:
                         break
                 
                 except Exception as e:
@@ -233,26 +201,17 @@ class MyHomeAdvancedScraper(BaseScraper):
                     page += 1
                     continue
             
-            self.logger.info(f"🎯 Scraping completed: {properties_processed} properties processed across {page-1} pages")
+            self.logger.info(f"MAXIMUM SPEED scraping completed: {properties_processed} properties processed")
     
-    async def _fetch_properties_page(self, page: int, 
-                                   property_type_filter: Optional[int],
-                                   deal_type_filter: Optional[int]) -> Optional[Dict]:
-        """Fetch a page of properties from the API."""
-        # Use configured default property types or fallback to all types
-        default_property_types = getattr(self.config, 'default_property_types', "2,1,3,4,5,6")
-        default_deal_types = getattr(self.config, 'default_deal_types', "1,2,3,7")
-        per_page = getattr(self.config, 'per_page', 1000)  # Updated to 1000 as the API limit
-        
+    async def _fetch_properties_page(self, page: int) -> Optional[Dict]:
+        """Fetch properties page - speed optimized."""
         params = {
-            'currency_id': 1,  # USD
-            'deal_types': deal_type_filter or default_deal_types,  # Default to all deal types
-            'real_estate_types': property_type_filter or default_property_types,  # Default to all types
+            'currency_id': 1,
+            'deal_types': self.config.default_deal_types,
+            'real_estate_types': self.config.default_property_types,
             'page': page,
-            'per_page': per_page  # Get maximum properties per request
+            'per_page': self.config.per_page
         }
-        
-        self.logger.info(f"🌐 Fetching page {page} with params: {params}")
         
         try:
             response = self.make_request(
@@ -262,24 +221,14 @@ class MyHomeAdvancedScraper(BaseScraper):
             
             data = response.json()
             
-            # Extract actual response info
-            properties_returned = len(data['data']['data']) if data.get('data') and data['data'].get('data') else 0
-            
-            # Log clean pagination info
-            self.logger.info(f"📊 API Response - Page {page}: {properties_returned} properties returned")
-            
             if data.get('result') and data.get('data') and data['data'].get('data'):
-                properties = data['data']['data']  # Navigate to the actual properties array
-                self.logger.info(f"📥 Successfully fetched {len(properties)} properties from page {page}")
-                
+                properties = data['data']['data']
                 return {'result': True, 'data': properties}
             else:
-                self.logger.warning(f"⚠️ No data returned from API for page {page}")
-                self.logger.debug(f"API Response structure: {data}")
                 return None
                 
         except Exception as e:
-            self.logger.error(f"❌ Failed to fetch page {page}: {e}")
+            self.logger.error(f"Failed to fetch page {page}: {e}")
             self.stats.errors += 1
             return None
     
@@ -305,7 +254,6 @@ class MyHomeAdvancedScraper(BaseScraper):
                 db.flush()
                 self.stats.agency_discarded += 1
             else:
-                self.logger.debug(f"Skipping duplicate property {property_id}")
                 self.stats.duplicates_skipped += 1
                 return  # Skip processing this duplicate
         
@@ -332,106 +280,181 @@ class MyHomeAdvancedScraper(BaseScraper):
         else:
             self.logger.warning(f"⚠️ Property {property_id} was not saved to database")
     
+    async def _process_properties_batch(self, db: Session, async_session: aiohttp.ClientSession,
+                                      raw_properties: List[Dict], default_user) -> int:
+        """Process ALL properties at MAXIMUM SPEED - NO BATCHING."""
+        total_count = len(raw_properties)
+        processed_count = 0
+        
+        self.logger.info(f"🚀 MAXIMUM SPEED MODE: Processing ALL {total_count} properties at once")
+        
+        # Process ALL properties directly without any batching or delays
+        valid_properties = []
+        existing_dict = {}
+        
+        # ULTRA-FAST bulk duplicate check - single query for ALL properties
+        if raw_properties:
+            external_ids = [str(prop.get('id', '')) for prop in raw_properties]
+            existing_properties = db.query(Property).filter(
+                Property.external_id.in_(external_ids)
+            ).all()
+            existing_dict = {str(prop.external_id): prop for prop in existing_properties}
+        
+        # DIRECT PROCESSING - NO LOOPS, NO DELAYS
+        for raw_property in raw_properties:
+            try:
+                property_data = self.data_processor.process_property(raw_property)
+                if not property_data:
+                    continue
+                
+                property_id = str(property_data.external_id)
+                
+                # Ultra-fast duplicate check
+                if property_id in existing_dict:
+                    existing_property = existing_dict[property_id]
+                    if (self.config.enable_owner_priority and 
+                        self.deduplication_service.is_owner_listing(property_data) and
+                        not self._is_owner_listing_from_db(existing_property)):
+                        db.delete(existing_property)
+                        self.stats.agency_discarded += 1
+                    else:
+                        self.stats.duplicates_skipped += 1
+                        continue
+                
+                valid_properties.append(property_data)
+                
+            except Exception as e:
+                self.logger.error(f"Error processing property {raw_property.get('id', 'unknown')}: {e}")
+                self.stats.errors += 1
+                continue
+        
+        # BULK SAVE ALL at once - MAXIMUM DATABASE EFFICIENCY
+        if valid_properties:
+            saved_count = self._ultra_fast_bulk_save(db, valid_properties, default_user)
+            processed_count += saved_count
+            
+            # Update statistics in bulk
+            for property_data in valid_properties[:saved_count]:
+                self.stats.add_property_type(property_data.property_type)
+                self.stats.add_deal_type(property_data.listing_type)
+                if self.deduplication_service.is_owner_listing(property_data):
+                    self.stats.owner_prioritized += 1
+        
+        # Single commit for ALL properties
+        db.commit()
+        self.logger.info(f"✅ MAXIMUM SPEED: {processed_count} properties saved in single operation")
+        
+        return processed_count
+    
+    def _ultra_fast_bulk_save(self, db: Session, properties: List[PropertyData], default_user) -> int:
+        """ULTRA-FAST bulk save - MAXIMUM SPEED."""
+        saved_count = 0
+        
+        # Direct database insertion without checks
+        for property_data in properties:
+            try:
+                # Create property dict
+                property_dict = property_data.to_dict()
+                property_dict['owner_id'] = default_user.id
+                
+                # Direct database insertion
+                property_obj = Property(**property_dict)
+                db.add(property_obj)
+                db.flush()  # Get ID
+                
+                # Save related data directly
+                self.database_service._save_property_images(db, property_obj.id, property_data.images)
+                self.database_service._save_property_parameters(db, property_obj.id, property_data.parameters)
+                self.database_service._save_property_prices(db, property_obj.id, property_data.prices)
+                
+                saved_count += 1
+                self.stats.new_properties += 1
+                        
+            except Exception as e:
+                self.logger.error(f"Error in ultra-fast save for property {property_data.external_id}: {e}")
+                self.stats.errors += 1
+                continue
+        
+        return saved_count
+    
+    def _batch_save_properties(self, db: Session, properties: List[PropertyData], default_user) -> int:
+        """Save multiple properties to database efficiently."""
+        saved_count = 0
+        
+        for property_data in properties:
+            try:
+                # Check if property already exists
+                existing_property = self.database_service.find_existing_property(
+                    db, property_data.external_id
+                )
+                
+                if existing_property:
+                    # Update existing property
+                    updated_property = self.database_service.update_property(db, existing_property, property_data)
+                    if updated_property:
+                        saved_count += 1
+                        self.stats.updated_properties += 1
+                else:
+                    # Create new property
+                    new_property = self.database_service.save_property(db, property_data, default_user)
+                    if new_property:
+                        saved_count += 1
+                        self.stats.new_properties += 1
+                        
+            except Exception as e:
+                self.logger.error(f"Error saving property {property_data.external_id}: {e}")
+                self.stats.errors += 1
+                continue
+        
+        return saved_count
+    
     async def _enhance_property_data(self, async_session: aiohttp.ClientSession,
                                    property_data: PropertyData, raw_data: Dict) -> None:
-        """Enhance property data with additional processing."""
-        try:
-            # Process multilingual content
-            await self.multilingual_processor.process_multilingual_content(
-                async_session, property_data
-            )
-            
-            # Process images
-            self.image_processor.process_property_images(property_data, raw_data)
-            
-            # Process prices
-            self.price_processor.process_property_prices(property_data, raw_data)
-            
-            # Process parameters
-            self.parameter_processor.process_property_parameters(property_data, raw_data)
-            
-        except Exception as e:
-            self.logger.warning(f"Error enhancing property {property_data.external_id}: {e}")
-    
-    def _save_property_to_database(self, db: Session, property_data: PropertyData, 
-                                 default_user) -> Optional:
-        """Save property data to database."""
-        try:
-            # Check if property already exists
-            existing_property = self.database_service.find_existing_property(
-                db, property_data.external_id
-            )
-            
-            if existing_property:
-                # Update existing property
-                return self.database_service.update_property(db, existing_property, property_data)
-            else:
-                # Create new property
-                return self.database_service.save_property(db, property_data, default_user)
-                
-        except RuntimeError as e:
-            self.logger.error(f"Database error saving property {property_data.external_id}: {e}")
-            self.stats.errors += 1
-            return None
-        except Exception as e:
-            self.logger.error(f"Unexpected error saving property {property_data.external_id}: {e}")
-            self.stats.errors += 1
-            return None
-    
-    def generate_report(self, output_format: str = "json") -> str:
-        """Generate comprehensive scraping report."""
-        try:
-            # Update languages processed in stats
-            if self.multilingual_processor.is_multilingual_enabled():
-                self.stats.languages_processed = self.multilingual_processor.get_supported_languages()
-            
-            return self.report_service.generate_report(self.stats, output_format)
-            
-        except Exception as e:
-            self.logger.error(f"Error generating report: {e}")
-            raise RuntimeError(f"Report generation failed: {e}")
+        """Skip all enhancements for MAXIMUM SPEED."""
+        # Skip ALL enhancements for maximum speed - direct data processing only
+        pass
     
     def get_statistics(self) -> ScrapingStats:
         """Get current scraping statistics."""
         return self.stats
     
-    def get_configuration(self) -> Dict:
-        """Get current configuration."""
-        return self.config.to_dict()
-
     def validate_property_data(self, property_data: Dict) -> bool:
         """Validate property data - minimal implementation."""
         return property_data is not None and 'id' in property_data
+    
+    def _is_owner_listing_from_db(self, db_property) -> bool:
+        """Check if a database property is an owner listing."""
+        # Simple check - owner listings typically have specific patterns
+        if hasattr(db_property, 'agency_name') and db_property.agency_name:
+            # If it has agency_name, it's likely an agency listing
+            return False
+        return True  # Assume owner listing if no agency info
 
 
 if __name__ == "__main__":
-    """Run the scraper when executed directly."""
+    """Run the MAXIMUM SPEED scraper."""
     import asyncio
     
     async def main():
-        """Main execution function."""
+        """Main execution function - MAXIMUM SPEED MODE."""
         try:
-            # Create scraper with default config
             scraper = MyHomeAdvancedScraper()
             
-            # Run continuous scraping
             cycle_count = 0
             while True:
                 cycle_count += 1
-                print(f"Starting scraping cycle #{cycle_count}...")
+                print(f"MAXIMUM SPEED Cycle #{cycle_count}...")
                 stats = await scraper.scrape()
                 
-                print(f"Scraping completed - New: {stats.new_properties}, Updated: {stats.updated_properties}, Duplicates Skipped: {stats.duplicates_skipped}, Errors: {stats.errors}")
+                print(f"New: {stats.new_properties}, Updated: {stats.updated_properties}, Errors: {stats.errors}")
                 
-                # Wait 15 seconds before next cycle (as requested)
-                print("Waiting 15 seconds before next cycle...")
-                await asyncio.sleep(15)  # 15 seconds
+                # NO DELAY - MAXIMUM SPEED CONTINUOUS SCRAPING
+                # await asyncio.sleep(1)  # Removed for maximum speed
                 
         except KeyboardInterrupt:
-            print("Scraper stopped by user")
+            print("MAXIMUM SPEED scraper stopped")
         except Exception as e:
-            print(f"Scraper error: {e}")
+            print(f"Error: {e}")
             raise
     
-    # Run the main function
     asyncio.run(main())
