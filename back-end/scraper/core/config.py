@@ -34,7 +34,7 @@ class ScrapingConfig:
     # Additional required attributes
     cleanup_days: int = 7
     rate_limit_per_minute: int = 1000  # High limit for speed
-    concurrent_languages: int = 1
+    concurrent_languages: int = 2  # Enable multilingual processing for EN and RU
     
     # Required lists
     user_agents: List[str] = field(default_factory=lambda: [

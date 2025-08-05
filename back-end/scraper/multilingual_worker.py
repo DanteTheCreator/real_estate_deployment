@@ -194,10 +194,32 @@ class MultilingualWorker:
                 self.session, property_data
             )
             
-            # Update database with new multilingual content
-            self._update_property_multilingual_content(property_obj, property_data)
+            # Check if we got any new content
+            has_new_content = False
             
-            self.logger.info(f"✅ Successfully processed multilingual content for property {property_data.external_id}")
+            if property_data.title_en and property_data.title_en != property_obj.title_en:
+                has_new_content = True
+                self.logger.info(f"📝 Got new English title for property {property_data.external_id}")
+                
+            if property_data.title_ru and property_data.title_ru != property_obj.title_ru:
+                has_new_content = True
+                self.logger.info(f"📝 Got new Russian title for property {property_data.external_id}")
+                
+            if property_data.description_en and property_data.description_en != property_obj.description_en:
+                has_new_content = True
+                self.logger.info(f"📝 Got new English description for property {property_data.external_id}")
+                
+            if property_data.description_ru and property_data.description_ru != property_obj.description_ru:
+                has_new_content = True
+                self.logger.info(f"📝 Got new Russian description for property {property_data.external_id}")
+            
+            if has_new_content:
+                # Update database with new multilingual content
+                self._update_property_multilingual_content(property_obj, property_data)
+                self.logger.info(f"✅ Successfully processed multilingual content for property {property_data.external_id}")
+            else:
+                self.logger.info(f"ℹ️ No new multilingual content found for property {property_data.external_id}")
+                self.stats.skipped += 1
             
         except Exception as e:
             self.logger.error(f"❌ Error processing property {property_obj.external_id}: {e}")
