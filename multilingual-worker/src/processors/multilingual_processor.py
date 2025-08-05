@@ -1,28 +1,19 @@
 """
-Multilingual content processing.
+Multilingual content processing for standalone worker.
 """
 import logging
 import asyncio
 import aiohttp
 from typing import Dict, List, Optional
 
-# Import with fallbacks for Docker compatibility
-try:
-    from core.config import ScrapingConfig
-    from models.property_data import PropertyData
-except ImportError:
-    try:
-        from ..core.config import ScrapingConfig
-        from ..models.property_data import PropertyData
-    except ImportError:
-        from scraper.core.config import ScrapingConfig
-        from scraper.models.property_data import PropertyData
+from ..models.property_data import PropertyData
+from ..core.config import MultilingualConfig
 
 
 class MultilingualProcessor:
     """Handles multilingual content processing."""
     
-    def __init__(self, config: ScrapingConfig):
+    def __init__(self, config: MultilingualConfig):
         """Initialize the multilingual processor."""
         self.config = config
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -83,13 +74,12 @@ class MultilingualProcessor:
         """Fetch property data in a specific language using the correct MyHome.ge API."""
         try:
             # Use the correct MyHome.ge API endpoint structure
-            # The API uses statements/{property_id} for individual property details
             detail_url = f"https://api-statements.tnet.ge/v1/statements/{property_id}"
             
             headers = {
                 'accept': 'application/json, text/plain, */*',
                 'accept-language': f'{language}-US,{language};q=0.9,ka;q=0.8,und;q=0.7',
-                'global-authorization': 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJ2IjoxLCJpYXQiOjE3NTQzODU3NjksImV4cGlyZXNfYXQiOjE3NTQzODY0MjksImRhdGEiOnsidXNlcl9pZCI6NTEwNTQzMywidXNlcm5hbWUiOiJrYXhhbWlxZWxhZHplQGdtYWlsLmNvbSIsInNlc3Npb25faWQiOiIzYzA2NjE4YjU0NGMyMTI4MTBkN2NhYjRhMDQ1Mzk5MDFlYThmZDljNWEwN2FhMWE3ZmI4NTdhMTdlOWVjNGZiIiwibGl2b191c2VyX2lkIjpudWxsLCJzd29vcF91c2VyX2lkIjozODQxNjAsInRrdF91c2VyX2lkIjpudWxsLCJnZW5kZXJfaWQiOjEsImJpcnRoX3llYXIiOjE5NzgsImJpcnRoX2RhdGUiOiIxOTc4LTA4LTAxIiwicGhvbmUiOiI1OTk3MzgwMjMiLCJ1c2VyX25hbWUiOiJrYXhhIiwidXNlcl9zdXJuYW1lIjoibWlxZWxhZHplIiwidHlwZV9pZCI6MH19.DES3OMjLem3W0em42vnxoSEYOAq4jLEAjjjixvRyqDJT0bQHd30wFqqjSrSfGH9iLZkMp0gtrXiVFJGV_RlWTlTvwfQCVzZM4H58dS-nescI2DZy4CZdTF9u45nWtgxXxhnz9Kk0gbHaVtqXHu1rUnxLJQoGc9g1k0JSH_Y9xDPoBbsNmqivRu5E7BXkh2Q6eXXL6BuCxWRxaNeD7pJ8dQmrEt4HVOoqTvMD_TiHE-dvgf5RqQRK7q3JOd4f-niXIKwjgn1JCCU3WUPUhvjEiCR_lV-OmyB_3IHCxoDcNr7sT48fBvYYsYLOhrjZVbUNVdmPO0JZFUIskq_6vWG3dw',
+                'global-authorization': self.config.API_TOKEN,
                 'locale': language,
                 'origin': 'https://www.myhome.ge',
                 'priority': 'u=1, i',

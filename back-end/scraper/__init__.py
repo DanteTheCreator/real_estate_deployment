@@ -24,7 +24,7 @@ Usage:
 """
 
 from .core import ScrapingConfig, BaseScraper
-from .myhome_scraper import MyHomeAdvancedScraper, scrape_properties
+from .myhome_scraper import MyHomeAdvancedScraper
 from .models import ScrapingStats, PropertyData
 
 __version__ = "2.0.0"
