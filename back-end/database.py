@@ -5,8 +5,16 @@ from datetime import datetime
 from typing import List, Optional
 from config import settings
 
-# Create engine and session
-engine = create_engine(settings.database_url)
+# Create engine and session with connection pooling optimizations
+engine = create_engine(
+    settings.database_url,
+    pool_size=10,              # Number of connections to maintain in pool
+    max_overflow=20,           # Additional connections beyond pool_size
+    pool_pre_ping=True,        # Verify connections before use
+    pool_recycle=3600,         # Recycle connections every hour
+    pool_timeout=30,           # Timeout for getting connection from pool
+    echo=False                 # Set to True for SQL debugging
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 class Base(DeclarativeBase):
@@ -64,30 +72,30 @@ class Property(Base):
     description_en: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # English description
     description_ru: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # Russian description
     address: Mapped[str] = mapped_column(String(500))
-    city: Mapped[str] = mapped_column(String(100))
-    state: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    city: Mapped[str] = mapped_column(String(100), index=True)  # Add index for city searches
+    state: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, index=True)  # Add index for state searches
     zip_code: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     country: Mapped[str] = mapped_column(String(100))
-    property_type: Mapped[str] = mapped_column(String(50))
-    listing_type: Mapped[str] = mapped_column(String(50))
+    property_type: Mapped[str] = mapped_column(String(50), index=True)  # Add index for property type filter
+    listing_type: Mapped[str] = mapped_column(String(50), index=True)  # Add index for listing type filter
     bedrooms: Mapped[int] = mapped_column(Integer)
     bathrooms: Mapped[float] = mapped_column(Float)
     square_feet: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     lot_size: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    rent_amount: Mapped[float] = mapped_column(Float)
-    rent_amount_usd: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    rent_amount: Mapped[float] = mapped_column(Float, index=True)  # Add index for price filtering
+    rent_amount_usd: Mapped[Optional[float]] = mapped_column(Float, nullable=True, index=True)  # Add index for USD price filtering
     security_deposit: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     lease_duration: Mapped[int] = mapped_column(Integer)  # months
     available_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
-    is_available: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_available: Mapped[bool] = mapped_column(Boolean, default=True, index=True)  # Add index for availability filter
     is_furnished: Mapped[bool] = mapped_column(Boolean, default=False)
     pets_allowed: Mapped[bool] = mapped_column(Boolean, default=False)
     smoking_allowed: Mapped[bool] = mapped_column(Boolean, default=False)
     year_built: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     parking_spaces: Mapped[int] = mapped_column(Integer, default=0)
     utilities_included: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
-    district: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    urban_area: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    district: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, index=True)  # Add index for district filter
+    urban_area: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, index=True)  # Add index for urban area filter
     latitude: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     longitude: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     floor_number: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
@@ -96,8 +104,8 @@ class Property(Base):
     source: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     user_type: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     last_scraped: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)  # Add index for owner queries
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)  # Add index for date sorting
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), onupdate=func.now(), nullable=True)
     
     # Relationships

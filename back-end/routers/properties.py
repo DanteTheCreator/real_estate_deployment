@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy import and_, or_
 from typing import List, Optional
 from database import get_db, Property, User, Amenity, PropertyImage, property_amenities, saved_properties
@@ -99,7 +99,10 @@ async def search_properties(
     db: Session = Depends(get_db)
 ):
     """Search properties with advanced filters"""
-    query_obj = db.query(Property).options(joinedload(Property.images)).filter(Property.is_available == True)
+    # Use selectinload for better performance with one-to-many relationships
+    query_obj = db.query(Property).options(
+        selectinload(Property.images)  # Only load essential image data
+    ).filter(Property.is_available == True)
     
     # General search query (search in title, description, address)
     if query:
@@ -278,7 +281,35 @@ async def get_search_count(
     currency: Optional[str] = Query("GEL", description="Currency for price filtering (GEL or USD)"),
     db: Session = Depends(get_db)
 ):
-    """Get count of search results with advanced filters"""
+    """Get count of search results with advanced filters - OPTIMIZED"""
+    # Import cache locally to avoid circular imports
+    try:
+        from cache import CacheManager, CACHE_TTL
+        CACHE_AVAILABLE = True
+    except ImportError:
+        CACHE_AVAILABLE = False
+    
+    if CACHE_AVAILABLE:
+        # Create cache key from all parameters
+        cache_params = {
+            'query': query, 'city': city, 'state': state, 'urban_area': urban_area,
+            'district': district, 'property_type': property_type, 'listing_type': listing_type,
+            'min_bedrooms': min_bedrooms, 'max_bedrooms': max_bedrooms,
+            'min_bathrooms': min_bathrooms, 'max_bathrooms': max_bathrooms,
+            'min_rent': min_rent, 'max_rent': max_rent,
+            'min_square_feet': min_square_feet, 'max_square_feet': max_square_feet,
+            'pets_allowed': pets_allowed, 'is_furnished': is_furnished, 'smoking_allowed': smoking_allowed,
+            'year_built_min': year_built_min, 'year_built_max': year_built_max,
+            'parking_spaces_min': parking_spaces_min, 'currency': currency
+        }
+        
+        cache_key = CacheManager.generate_cache_key("search_count", **cache_params)
+        
+        # Try cache first
+        cached_count = CacheManager.get(cache_key)
+        if cached_count is not None:
+            return {"total_count": cached_count}
+    
     query_obj = db.query(Property).filter(Property.is_available == True)
     
     # Apply same filters as search_properties
@@ -355,6 +386,11 @@ async def get_search_count(
         query_obj = query_obj.filter(Property.parking_spaces >= parking_spaces_min)
     
     total_count = query_obj.count()
+    
+    # Cache the result if available
+    if CACHE_AVAILABLE:
+        CacheManager.set(cache_key, total_count, CACHE_TTL['property_count'])
+    
     return {"total_count": total_count}
 
 @router.get("/saved", response_model=List[PropertyListResponse])
