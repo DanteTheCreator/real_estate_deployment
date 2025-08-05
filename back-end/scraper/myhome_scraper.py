@@ -282,15 +282,50 @@ class MyHomeAdvancedScraper(BaseScraper):
     
     async def _process_properties_batch(self, db: Session, async_session: aiohttp.ClientSession,
                                       raw_properties: List[Dict], default_user) -> int:
-        """Process ALL properties at MAXIMUM SPEED - NO BATCHING."""
+        """Process properties in controlled batches to prevent database overload."""
         total_count = len(raw_properties)
         processed_count = 0
         
-        self.logger.info(f"🚀 MAXIMUM SPEED MODE: Processing ALL {total_count} properties at once")
+        # Use maximum batch size for optimal performance with controlled delay
+        BATCH_SIZE = 1000  # Maximum batch size for optimal throughput
+        
+        self.logger.info(f"🏭 CONTROLLED BATCH MODE: Processing {total_count} properties in batches of {BATCH_SIZE}")
+        
+        # Process properties in maximum batches with controlled delays
+        for i in range(0, total_count, BATCH_SIZE):
+            batch = raw_properties[i:i+BATCH_SIZE]
+            batch_num = (i // BATCH_SIZE) + 1
+            
+            self.logger.info(f"Processing batch {batch_num}: {len(batch)} properties")
+            
+            try:
+                # Process batch with controlled database access
+                batch_processed = await self._process_single_batch(db, async_session, batch, default_user)
+                processed_count += batch_processed
+                
+                # Force commit after each batch to prevent long-running transactions
+                db.commit()
+                self.logger.debug(f"Committed batch {batch_num} to database")
+                
+                # 3 second delay between batches to balance load
+                await asyncio.sleep(3.0)  # 3 second delay between batches
+                
+            except Exception as e:
+                self.logger.error(f"Error processing batch {batch_num}: {e}")
+                db.rollback()  # Rollback failed batch
+                continue
+        
+        self.logger.info(f"✅ BATCH PROCESSING COMPLETE: {processed_count} properties saved")
+        return processed_count
+    
+    async def _process_single_batch(self, db: Session, async_session: aiohttp.ClientSession,
+                                  raw_properties: List[Dict], default_user) -> int:
+        """Process a single batch of properties."""
         
         # Process ALL properties directly without any batching or delays
         valid_properties = []
         existing_dict = {}
+        processed_count = 0
         
         # ULTRA-FAST bulk duplicate check - single query for ALL properties
         if raw_properties:

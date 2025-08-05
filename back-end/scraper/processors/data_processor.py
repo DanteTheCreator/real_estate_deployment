@@ -166,22 +166,22 @@ class DataProcessor:
             
             # Set GEL amount (primary currency - higher values)
             if gel_price_info and isinstance(gel_price_info, dict):
-                gel_price_total = gel_price_info.get('price_total', 0)
-                if gel_price_total and gel_price_total > 0:
+                gel_price_total = self._safe_float(gel_price_info.get('price_total'), 0)
+                if gel_price_total > 0:
                     property_data.rent_amount = gel_price_total
             
             # Set USD amount (secondary currency - lower values)
             if usd_price_info and isinstance(usd_price_info, dict):
-                usd_price_total = usd_price_info.get('price_total', 0)
-                if usd_price_total and usd_price_total > 0:
+                usd_price_total = self._safe_float(usd_price_info.get('price_total'), 0)
+                if usd_price_total > 0:
                     property_data.rent_amount_usd = usd_price_total
             
             # Fallback: if no GEL price but have other currencies, use the first available
             if property_data.rent_amount == 0.0 and price_data:
                 fallback_price_info = next(iter(price_data.values()))
                 if fallback_price_info and isinstance(fallback_price_info, dict):
-                    fallback_price_total = fallback_price_info.get('price_total', 0)
-                    if fallback_price_total and fallback_price_total > 0:
+                    fallback_price_total = self._safe_float(fallback_price_info.get('price_total'), 0)
+                    if fallback_price_total > 0:
                         property_data.rent_amount = fallback_price_total
         
         # Process all price currencies for the prices list
@@ -196,10 +196,10 @@ class DataProcessor:
         # Process each currency in the price data
         for currency_id, price_info in price_data.items():
             if isinstance(price_info, dict):
-                price_total = price_info.get('price_total', 0)
-                price_square = price_info.get('price_square', 0)
+                price_total = self._safe_float(price_info.get('price_total'), 0)
+                price_square = self._safe_float(price_info.get('price_square'), 0)
                 
-                if price_total and price_total > 0:
+                if price_total > 0:
                     # Create PropertyPrice object using direct instantiation
                     property_price = type('PropertyPrice', (), {
                         'currency_type': str(currency_id),
@@ -318,7 +318,7 @@ class DataProcessor:
             return 'owner'
         
         # Check if user has many listings (agencies typically have more listings)
-        user_statements_count = raw_data.get('user_statements_count', 0)
+        user_statements_count = self._safe_int(raw_data.get('user_statements_count'), 0)
         if user_statements_count > 5:  # Agencies typically have many listings
             return 'agency'
         

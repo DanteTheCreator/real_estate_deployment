@@ -10,7 +10,7 @@ from typing import List, Optional
 
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from sqlalchemy import and_, or_, func
+from sqlalchemy import and_, or_, func, text
 
 # Add parent directories to path for Docker compatibility
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -60,8 +60,12 @@ class DatabaseService:
         self.logger = logging.getLogger(self.__class__.__name__)
     
     def get_session(self) -> Session:
-        """Get a database session."""
-        return SessionLocal()
+        """Get a database session with connection pooling."""
+        session = SessionLocal()
+        # Configure session for faster transactions
+        session.execute(text("SET idle_in_transaction_session_timeout = '30s'"))
+        session.execute(text("SET lock_timeout = '10s'"))
+        return session
     
     def create_default_user(self, db: Session) -> User:
         """Create or get default system user."""
