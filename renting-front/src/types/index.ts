@@ -173,6 +173,9 @@ export interface SearchFilters {
   features?: Partial<PropertyFeatures>;
   applicationType?: string[];
   cadastralCode?: string;
+  // Sort parameters
+  sort_by?: 'price' | 'area' | 'date' | 'bedrooms';
+  sort_order?: 'asc' | 'desc';
 }
 
 export interface SearchState {

@@ -133,9 +133,9 @@ export const propertyService = {
     if (filters.areaMin) queryParams.min_square_feet = filters.areaMin;
     if (filters.areaMax) queryParams.max_square_feet = filters.areaMax;
     
-    // Sort parameters
-    queryParams.sort_by = 'date';
-    queryParams.sort_order = 'desc';
+    // Sort parameters - use from filters or default to date desc
+    queryParams.sort_by = filters.sort_by || 'date';
+    queryParams.sort_order = filters.sort_order || 'desc';
     
     // Get count parameters (same as query params but without skip/limit)
     const countParams = { ...queryParams };

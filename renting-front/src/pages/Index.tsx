@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AppLayout } from '@/components/AppLayout';
 import { ListingGrid } from '@/components/ListingGrid';
+import { SortComponent } from '@/components/SortComponent';
 import { useProperties } from '@/hooks/useProperties';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SearchFilters } from '@/types';
@@ -21,6 +22,9 @@ const Index: React.FC = () => {
   const { t } = useLanguage();
   const [hasSearched, setHasSearched] = useState(false);
   const [totalAvailableProperties, setTotalAvailableProperties] = useState<number | null>(null);
+  const [currentSortBy, setCurrentSortBy] = useState('date');
+  const [currentSortOrder, setCurrentSortOrder] = useState('desc');
+  const [currentFilters, setCurrentFilters] = useState<SearchFilters>({});
 
   // Load total available properties count
   useEffect(() => {
@@ -39,26 +43,51 @@ const Index: React.FC = () => {
   // Load initial properties when component mounts
   useEffect(() => {
     if (!hasSearched) {
-      // Initial load - show all available properties with default pagination
+      // Initial load - show all available properties with default sorting
       const defaultFilters: SearchFilters = {
-        // Start with no filters to show all available properties
+        sort_by: currentSortBy as 'price' | 'area' | 'date' | 'bedrooms',
+        sort_order: currentSortOrder as 'asc' | 'desc'
       };
+      setCurrentFilters(defaultFilters);
       searchProperties(defaultFilters);
       setHasSearched(true);
     }
-  }, [hasSearched, searchProperties]);
+  }, [hasSearched, searchProperties, currentSortBy, currentSortOrder]);
 
   const handleSearch = async (filters: SearchFilters) => {
-    await searchProperties(filters);
+    // Add current sort parameters to the search filters
+    const filtersWithSort = {
+      ...filters,
+      sort_by: currentSortBy as 'price' | 'area' | 'date' | 'bedrooms',
+      sort_order: currentSortOrder as 'asc' | 'desc'
+    };
+    
+    setCurrentFilters(filtersWithSort);
+    await searchProperties(filtersWithSort);
     setHasSearched(true);
+  };
+
+  const handleSortChange = async (sortBy: string, sortOrder: string) => {
+    setCurrentSortBy(sortBy);
+    setCurrentSortOrder(sortOrder);
+    
+    // Apply sort to current search results
+    const updatedFilters = {
+      ...currentFilters,
+      sort_by: sortBy as 'price' | 'area' | 'date' | 'bedrooms',
+      sort_order: sortOrder as 'asc' | 'desc'
+    };
+    
+    setCurrentFilters(updatedFilters);
+    await searchProperties(updatedFilters);
   };
 
   return (
     <AppLayout showBanner={true} showSearch={true} onSearch={handleSearch}>
       <div className="py-8">
         <div className="container mx-auto px-4">
-          {/* Results Header */}
-          <div className="flex justify-between items-center mb-6">
+          {/* Results Header with Sort */}
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
             <div>
               <h1 className="text-3xl font-bold text-foreground mb-2">
                 Discover Your Perfect Home
@@ -74,20 +103,36 @@ const Index: React.FC = () => {
                 </p>
               )}
             </div>
-            <div className="text-right">
-              {totalCount > 0 && (
-                <p className="text-sm text-muted-foreground">
-                  {totalCount === 1 
-                    ? `1 property found` 
-                    : `${totalCount.toLocaleString()} search results`
-                  }
-                </p>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              {/* Quick Sort Controls - Show always when search has been performed */}
+              {(properties.length > 0 || hasSearched) && (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium text-muted-foreground">Sort by:</span>
+                  <SortComponent
+                    sortBy={currentSortBy}
+                    sortOrder={currentSortOrder}
+                    onSortChange={handleSortChange}
+                    compact={true}
+                  />
+                </div>
               )}
-              {totalPages > 1 && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Page {currentPage} of {totalPages}
-                </p>
-              )}
+              
+              {/* Results Count */}
+              <div className="text-right">
+                {totalCount > 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    {totalCount === 1 
+                      ? `1 property found` 
+                      : `${totalCount.toLocaleString()} search results`
+                    }
+                  </p>
+                )}
+                {totalPages > 1 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Page {currentPage} of {totalPages}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 

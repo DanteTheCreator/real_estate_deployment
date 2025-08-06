@@ -42,6 +42,8 @@ const SimpleSearchPanel: React.FC<SimpleSearchPanelProps> = ({ className = '', o
     features: {},
     applicationType: [],
     cadastralCode: undefined,
+    sort_by: 'date',
+    sort_order: 'desc',
   });
   
   const [activeTab, setActiveTab] = useState('sale');
@@ -65,6 +67,8 @@ const SimpleSearchPanel: React.FC<SimpleSearchPanelProps> = ({ className = '', o
         max_rent: searchForm.priceMax,
         min_bedrooms: searchForm.bedroomsMin,
         max_bedrooms: searchForm.bedroomsMax,
+        sort_by: searchForm.sort_by,
+        sort_order: searchForm.sort_order,
         // Map other legacy fields for compatibility
         propertyType: searchForm.propertyType === 'all' ? undefined : searchForm.propertyType,
         listingType: activeTab,

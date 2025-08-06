@@ -9,6 +9,7 @@ import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Search, Filter, X, MapPin, Home, DollarSign, Settings, ChevronDown, SlidersHorizontal } from 'lucide-react';
+import { SortComponent } from './SortComponent';
 import { SearchFilters } from '@/types';
 
 interface AdvancedSearchPanelProps {
@@ -53,6 +54,9 @@ interface FilterState {
   videocall: boolean;
   ukraineDiscount: boolean;
   cadastralCode: string;
+  // Sort parameters
+  sortBy: string;
+  sortOrder: string;
 }
 
 const AdvancedSearchPanel: React.FC<AdvancedSearchPanelProps> = ({ onSearch }) => {
@@ -93,7 +97,10 @@ const AdvancedSearchPanel: React.FC<AdvancedSearchPanelProps> = ({ onSearch }) =
     pool: false,
     videocall: false,
     ukraineDiscount: false,
-    cadastralCode: ''
+    cadastralCode: '',
+    // Sort parameters
+    sortBy: 'date',
+    sortOrder: 'desc'
   });
 
   const dealTypes = [
@@ -183,7 +190,10 @@ const AdvancedSearchPanel: React.FC<AdvancedSearchPanelProps> = ({ onSearch }) =
       pool: false,
       videocall: false,
       ukraineDiscount: false,
-      cadastralCode: ''
+      cadastralCode: '',
+      // Sort parameters
+      sortBy: 'date',
+      sortOrder: 'desc'
     });
   };
 
@@ -194,6 +204,15 @@ const AdvancedSearchPanel: React.FC<AdvancedSearchPanelProps> = ({ onSearch }) =
       [key]: prev[key].includes(value) 
         ? prev[key].filter(item => item !== value)
         : [...prev[key], value]
+    }));
+  };
+
+  const handleSortChange = (sortBy: string, sortOrder: string) => {
+    console.log('Sort change:', sortBy, sortOrder); // Debug log
+    setFilters(prev => ({
+      ...prev,
+      sortBy,
+      sortOrder
     }));
   };
 
@@ -210,6 +229,9 @@ const AdvancedSearchPanel: React.FC<AdvancedSearchPanelProps> = ({ onSearch }) =
         areaMin: filters.areaRange[0] > 0 ? filters.areaRange[0] : undefined,
         areaMax: filters.areaRange[1] < 500 ? filters.areaRange[1] : undefined,
         is_furnished: filters.furnished || undefined,
+        // Include sort parameters
+        sort_by: filters.sortBy as 'price' | 'area' | 'date' | 'bedrooms',
+        sort_order: filters.sortOrder as 'asc' | 'desc'
       };
       
       onSearch(searchFilters);
@@ -361,6 +383,17 @@ const AdvancedSearchPanel: React.FC<AdvancedSearchPanelProps> = ({ onSearch }) =
                   <span>{formatCurrency(filters.priceRange[1])}</span>
                 </div>
               </div>
+            </div>
+            
+            {/* Sort Options - Compact Version */}
+            <div className="bg-muted/30 rounded-xl p-4 border border-border">
+              <SortComponent
+                sortBy={filters.sortBy}
+                sortOrder={filters.sortOrder}
+                onSortChange={handleSortChange}
+                compact={true}
+                className="flex items-center justify-between"
+              />
             </div>
             
             {/* Search Button */}
@@ -715,6 +748,15 @@ const AdvancedSearchPanel: React.FC<AdvancedSearchPanelProps> = ({ onSearch }) =
                   </div>
                 </DialogContent>
               </Dialog>
+            </div>
+            
+            {/* Sort Options */}
+            <div className="bg-muted/30 rounded-xl p-4 border border-border">
+              <SortComponent
+                sortBy={filters.sortBy}
+                sortOrder={filters.sortOrder}
+                onSortChange={handleSortChange}
+              />
             </div>
             
             {/* Action Buttons */}
