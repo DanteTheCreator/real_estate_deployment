@@ -214,30 +214,25 @@ services:
         max-file: "3"
     # Container handles startup automatically via Dockerfile
 
-  # Multilingual Content Processor (Integrated Worker)
+  # Multilingual Content Processor (Dedicated Worker)
   multilingual_worker:
     build:
-      context: ./back-end
-      dockerfile: Dockerfile.production
-      args:
-        - BUILD_ENV=production
+      context: ./multilingual-worker
+      dockerfile: Dockerfile
     container_name: comfyrent-multilingual-worker
-    env_file:
-      - .env.production
     environment:
-      # Worker configuration
-      - BATCH_SIZE=10
-      - CHECK_INTERVAL=300  # Check every 5 minutes
-      - MODE=new
-      # Database connection
+      # Database connection (password read from secrets file)
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
       - POSTGRES_DB=comfyrent_production
       - POSTGRES_USER=comfyrent_user
-      # Logging
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+      # Worker configuration
+      - BATCH_SIZE=50
+      - PROCESS_INTERVAL=300
+      - MAX_RETRIES=3
       - LOG_LEVEL=INFO
-      # Enable multilingual processing for this worker
-      - SCRAPER_CONCURRENT_LANGUAGES=true
+      - DEBUG_MODE=false
     secrets:
       - postgres_password
     depends_on:
@@ -248,8 +243,7 @@ services:
     restart: unless-stopped
     volumes:
       - multilingual_logs:/app/logs
-      - ./multilingual-worker/logs:/app/worker_logs
-    command: ["python", "/app/scraper/multilingual_worker.py", "--continuous", "--batch-size", "10"]
+      - ./multilingual-worker/logs:/app/logs
     deploy:
       resources:
         limits:
