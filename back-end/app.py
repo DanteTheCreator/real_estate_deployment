@@ -160,6 +160,17 @@ async def health_check():
             health_status["database_error"] = str(e)
             health_status["status"] = "unhealthy"
         
+        # Check Redis connection
+        try:
+            from cache import redis_client
+            redis_client.ping()
+            health_status["redis"] = "connected"
+        except Exception as e:
+            health_status["redis"] = "disconnected"
+            health_status["redis_error"] = str(e)
+            # Don't mark as unhealthy for Redis since it's for caching only
+            # health_status["status"] = "degraded"
+        
         # Check system resources (only in production monitoring)
         if settings.monitoring_enabled:
             try:

@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 # Initialize Redis client
 try:
-    redis_client = redis.from_url(settings.redis_url, decode_responses=True)
+    redis_client = redis.from_url(settings.redis_url_with_auth, decode_responses=True)
     CACHE_ENABLED = True
     logger.info("✅ Redis cache enabled")
 except Exception as e:

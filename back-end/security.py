@@ -19,10 +19,10 @@ logger = logging.getLogger(__name__)
 # Initialize Redis client for rate limiting and caching
 if settings.rate_limit_enabled:
     try:
-        redis_client = redis.from_url(settings.redis_url)
+        redis_client = redis.from_url(settings.redis_url_with_auth)
         limiter = Limiter(
             key_func=get_remote_address,
-            storage_uri=settings.redis_url,
+            storage_uri=settings.redis_url_with_auth,
             default_limits=["1000/day", "100/hour"]
         )
     except Exception as e:
@@ -92,8 +92,18 @@ class SecurityMiddleware:
         # Block common attack patterns
         suspicious_patterns = [
             "sqlmap", "nikto", "nmap", "masscan", "dirb", "gobuster",
-            "wpscan", "burpsuite", "metasploit"
+            "wpscan", "burpsuite", "metasploit", "curl", "wget", "python-requests"
         ]
+        
+        # Block requests to root path from external IPs
+        client_host = str(request.client.host)
+        trusted_hosts = {"127.0.0.1", "localhost", "::1", "172.20.0.1"}
+        
+        if (client_host not in trusted_hosts and 
+            str(request.url.path) == "/" and 
+            request.method == "GET"):
+            logger.warning(f"External root path access from {client_host}")
+            return True
         
         if any(pattern in user_agent for pattern in suspicious_patterns):
             logger.warning(f"Suspicious user agent: {user_agent} from {request.client.host}")

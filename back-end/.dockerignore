@@ -34,7 +34,39 @@ Dockerfile
 # Test files
 .pytest_cache/
 *.tmp
+tests/
+test_*.py
+*_test.py
+pytest.ini
+.coverage
+htmlcov/
+.tox/
 
 # Environment files
 .env
 .env.local
+.env.development
+.env.test
+*.env
+
+# Documentation
+docs/
+*.md
+README*
+CHANGELOG*
+LICENSE*
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Development directories
+temp/
+tmp/
+data/

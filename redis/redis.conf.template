@@ -1,0 +1,25 @@
+# Redis Configuration Template for Production
+# Password authentication (will be substituted from secret)
+requirepass ${REDIS_PASSWORD}
+
+# Memory management
+maxmemory 200mb
+maxmemory-policy allkeys-lru
+
+# Persistence settings
+save 900 1
+save 300 10
+save 60 10000
+
+# Network settings
+bind 0.0.0.0
+protected-mode yes
+port 6379
+
+# Logging
+loglevel notice
+
+# Security settings
+rename-command FLUSHDB ""
+rename-command FLUSHALL ""
+rename-command DEBUG ""

@@ -8,11 +8,12 @@ from config import settings
 # Create engine and session with connection pooling optimizations
 engine = create_engine(
     settings.database_url,
-    pool_size=10,              # Number of connections to maintain in pool
-    max_overflow=20,           # Additional connections beyond pool_size
+    pool_size=15,              # Increased pool size
+    max_overflow=30,           # Increased overflow connections
     pool_pre_ping=True,        # Verify connections before use
-    pool_recycle=3600,         # Recycle connections every hour
-    pool_timeout=30,           # Timeout for getting connection from pool
+    pool_recycle=1800,         # Recycle connections every 30 minutes (reduced from 1 hour)
+    pool_timeout=60,           # Increased timeout for getting connection from pool
+    pool_reset_on_return='commit',  # Reset connections on return to pool
     echo=False                 # Set to True for SQL debugging
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

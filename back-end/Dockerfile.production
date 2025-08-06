@@ -47,15 +47,29 @@ COPY --from=builder /opt/venv /opt/venv
 # Set working directory
 WORKDIR /app
 
-
-# Create logs directory for app logging
-RUN mkdir -p /app/logs
-
 # Copy application code
 COPY --chown=comfyrent:comfyrent . .
 
-# Remove development files
-RUN rm -rf tests/ docs/ *.md .env* requirements-dev.txt
+# Create necessary directories
+RUN mkdir -p logs data
+
+# Remove development and unnecessary files
+RUN rm -rf \
+    tests/ \
+    docs/ \
+    *.md \
+    .env* \
+    requirements-dev.txt \
+    .git/ \
+    .gitignore \
+    __pycache__/ \
+    .pytest_cache/ \
+    *.pyc \
+    *.pyo \
+    .coverage \
+    htmlcov/ \
+    .DS_Store \
+    Thumbs.db
 
 # Set proper permissions
 RUN chown -R comfyrent:comfyrent /app
@@ -71,4 +85,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
 EXPOSE 8000
 
 # Run production server with Gunicorn
-CMD ["gunicorn", "app:app", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000", "--max-requests", "1000", "--max-requests-jitter", "50", "--preload", "--access-logfile", "-", "--error-logfile", "-"]
+CMD ["gunicorn", "app:app", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000", "--max-requests", "5000", "--max-requests-jitter", "100", "--timeout", "60", "--keep-alive", "10", "--preload", "--access-logfile", "-", "--error-logfile", "-"]

@@ -40,6 +40,23 @@ class Settings(BaseSettings):
     # Redis settings
     redis_url: str = os.getenv("REDIS_URL", "redis://redis:6379/0")
     
+    @property
+    def redis_url_with_auth(self) -> str:
+        """Get Redis URL with authentication from secret file"""
+        redis_password_file = os.getenv("REDIS_PASSWORD_FILE", "/run/secrets/redis_password")
+        if os.path.exists(redis_password_file):
+            try:
+                with open(redis_password_file, 'r') as f:
+                    password = f.read().strip()
+                # Parse the base URL and add authentication
+                if self.redis_url.startswith("redis://"):
+                    return f"redis://:{password}@{self.redis_url[8:]}"
+                return self.redis_url
+            except Exception as e:
+                print(f"Warning: Could not read Redis password from {redis_password_file}: {e}")
+                return self.redis_url
+        return self.redis_url
+    
     # Rate limiting
     rate_limit_enabled: bool = os.getenv("RATE_LIMIT_ENABLED", "true").lower() == "true"
     rate_limit_requests_per_minute: int = int(os.getenv("RATE_LIMIT_REQUESTS_PER_MINUTE", "100"))

@@ -10,9 +10,14 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+*.pyo
+*.pyd
 
 # FastAPI
 .env
+.env.local
+.env.development
+.env.test
 *.log
 
 # MinIO data
@@ -21,6 +26,8 @@ minio-data/
 # Database
 *.db
 *.sqlite3
+backups/*.sql
+backups/*.dump
 
 # IDE
 .vscode/
@@ -28,10 +35,13 @@ minio-data/
 *.swp
 *.swo
 *~
+.sublime-project
+.sublime-workspace
 
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # Logs
 logs/
@@ -39,14 +49,20 @@ logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.pnpm-debug.log*
 
 # Dependencies
 node_modules/
+.npm
+.yarn/
+.pnp.*
 
 # Build outputs
 dist/
 build/
 *.egg-info/
+.next/
+out/
 
 # Testing
 .coverage
@@ -55,9 +71,46 @@ coverage.xml
 *.cover
 .hypothesis/
 .tox/
+.nyc_output/
+coverage/
+.jest/
 
 # Temporary files
 *.tmp
 *.temp
 .tmp/
 .temp/
+temp/
+tmp/
+
+# Docker volumes
+postgres_data/
+redis_data/
+minio_data/
+scraper_logs/
+scraper_data/
+multilingual_logs/
+
+# Security - Never commit secrets!
+secrets/
+*.key
+*.pem
+*.crt
+*.p12
+*.pfx
+
+# Cache files
+.eslintcache
+*.tsbuildinfo
+
+# Runtime
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Backup files
+*.bak
+*.backup
+.env*
+secrets/
