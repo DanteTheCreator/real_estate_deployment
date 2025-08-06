@@ -34,6 +34,10 @@ class MultilingualProcessor:
             'ru': 'ru'   # Russian
         }
     
+    def is_multilingual_enabled(self) -> bool:
+        """Check if multilingual processing is enabled."""
+        return self.config.concurrent_languages
+    
     def get_supported_languages(self) -> List[str]:
         """Get list of supported languages."""
         return list(self.language_codes.keys())
@@ -41,6 +45,8 @@ class MultilingualProcessor:
     async def process_multilingual_content(self, session: aiohttp.ClientSession, 
                                          property_data: PropertyData) -> None:
         """Process multilingual content for a property."""
+        if not self.is_multilingual_enabled():
+            return
         
         try:
             # Try to get content for each language from API
@@ -110,27 +116,10 @@ class MultilingualProcessor:
                 if response.status == 200:
                     data = await response.json()
                     
-                    # Debug: log the response structure
-                    self.logger.debug(f"API response keys: {data.keys() if isinstance(data, dict) else 'Not a dict'}")
-                    
                     # The detail endpoint should return the property data directly
                     if data.get('result') and data.get('data'):
-                        # The actual property data is nested under "statement"
-                        if 'statement' in data['data']:
-                            property_data = data['data']['statement']
-                        else:
-                            property_data = data['data']
-                            
+                        property_data = data['data']
                         self.logger.info(f"Successfully fetched property {property_id} in {language}")
-                        
-                        # Debug: log what fields are available
-                        if isinstance(property_data, dict):
-                            self.logger.debug(f"Property data keys: {list(property_data.keys())[:10]}...")  # First 10 keys
-                            title_candidates = [k for k in property_data.keys() if 'title' in k.lower()]
-                            desc_candidates = [k for k in property_data.keys() if any(word in k.lower() for word in ['desc', 'comment', 'detail'])]
-                            self.logger.debug(f"Title candidates: {title_candidates}")
-                            self.logger.debug(f"Description candidates: {desc_candidates}")
-                        
                         return property_data
                     else:
                         self.logger.warning(f"No property data found for {property_id} in {language}")

@@ -1,205 +1,61 @@
-# Multilingual Worker Service
+# Multilingual Worker (Integrated)
 
-A standalone service for processing multilingual content (English and Russian translations) for real estate properties using the MyHome.ge API.
+## 🔄 Status: INTEGRATED INTO MAIN SYSTEM
 
-## Features
+This multilingual worker functionality has been **integrated into the main ComfyRent backend system**. The standalone worker files have been removed and the functionality is now available through the main `docker-compose.yml`.
 
-- Fetches English and Russian translations from MyHome.ge API
-- Updates property records in the database with multilingual content
-- Fallback translation system for basic Georgian terms
-- Batch processing with configurable intervals
-- Docker containerized deployment
-- Comprehensive logging and error handling
+## 🏗️ Current Architecture
 
-## Project Structure
+The multilingual worker runs as part of the main system:
 
-```
-multilingual-worker/
-├── main.py                           # Main worker application
-├── src/
-│   ├── core/
-│   │   └── config.py                 # Configuration management
-│   ├── models/
-│   │   └── property_data.py          # Property data models
-│   ├── processors/
-│   │   └── multilingual_processor.py # API processing logic
-│   └── services/
-│       └── database_service.py       # Database operations
-├── requirements.txt                  # Python dependencies
-├── Dockerfile                        # Docker build configuration
-├── docker-compose.yml               # Docker deployment
-└── .env.example                     # Environment variables template
-```
+- **Main Service**: `comfyrent-multilingual-worker` (defined in `/docker-compose.yml`)
+- **Code Location**: `/back-end/scraper/multilingual_worker.py` and `/back-end/scraper/processors/multilingual_processor.py`
+- **Integration**: Uses the same database, network, and configuration as other services
 
-## Setup
+## 🚀 Usage
 
-### Local Development
-
-1. **Clone and navigate to the directory:**
-   ```bash
-   cd multilingual-worker
-   ```
-
-2. **Create environment file:**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your database credentials
-   ```
-
-3. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Run the worker:**
-   ```bash
-   python main.py
-   ```
-
-### Docker Deployment
-
-1. **Build and run with Docker Compose:**
-   ```bash
-   # Build the service
-   docker-compose build
-
-   # Run in standalone mode (includes its own PostgreSQL)
-   docker-compose --profile multilingual up -d
-
-   # Or connect to existing network
-   POSTGRES_PASSWORD=your_password docker-compose --profile multilingual up -d
-   ```
-
-2. **Connect to existing infrastructure:**
-   ```bash
-   # If you have the main real estate application running
-   docker-compose -f ../docker-compose.yml -f docker-compose.yml up multilingual-worker
-   ```
-
-## Configuration
-
-### Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL connection string | Required |
-| `API_TOKEN` | MyHome.ge API authorization token | Required |
-| `LOG_LEVEL` | Logging level (DEBUG, INFO, WARNING, ERROR) | INFO |
-| `BATCH_SIZE` | Number of properties to process per batch | 50 |
-| `PROCESS_INTERVAL` | Seconds between processing cycles | 300 |
-| `MAX_RETRIES` | Maximum retries for failed API requests | 3 |
-| `DEBUG_MODE` | Enable debug mode for detailed logging | false |
-
-### Database Requirements
-
-The service expects a PostgreSQL database with a `properties` table containing the following columns:
-
-- `id`: Primary key
-- `external_id`: External property ID from MyHome.ge
-- `title`: Georgian title
-- `description`: Georgian description
-- `title_en`: English title (updated by this service)
-- `title_ru`: Russian title (updated by this service)
-- `description_en`: English description (updated by this service)
-- `description_ru`: Russian description (updated by this service)
-
-## How It Works
-
-1. **Property Discovery**: Queries the database for properties that don't have English or Russian translations
-2. **API Processing**: Fetches property details from MyHome.ge API for each supported language
-3. **Content Extraction**: Extracts titles and descriptions from API responses
-4. **Database Update**: Updates the property records with the new multilingual content
-5. **Fallback Translation**: Applies basic term translations if API fails
-6. **Continuous Processing**: Repeats the cycle at configured intervals
-
-## API Integration
-
-The service integrates with the MyHome.ge API:
-- **Endpoint**: `https://api-statements.tnet.ge/v1/statements/{property_id}`
-- **Languages**: English (`en`) and Russian (`ru`)
-- **Authentication**: Uses global authorization token
-- **Rate Limiting**: Built-in delays between requests
-
-## Logging
-
-Logs are written to both console and files (if volume mounted):
-- Application logs: `/app/logs/multilingual_worker.log`
-- Error logs: Captured with full stack traces
-- Progress tracking: Batch processing statistics
-
-## Monitoring
-
-The service logs key metrics:
-- Properties processed per batch
-- API success/failure rates
-- Database update statistics
-- Processing time per batch
-
-## Error Handling
-
-- **API Failures**: Automatic retries with exponential backoff
-- **Database Errors**: Transaction rollback and error logging
-- **Network Issues**: Graceful handling with fallback translations
-- **Invalid Data**: Skips problematic records and continues
-
-## Development
-
-### Adding New Languages
-
-1. Update `language_codes` in `MultilingualProcessor`
-2. Add new fields to the `PropertyData` model
-3. Update database schema accordingly
-4. Extend the API processing logic
-
-### Testing
+The multilingual worker is automatically started with the main system:
 
 ```bash
-# Test with a specific property ID
-python -c "
-import asyncio
-from main import MultilingualWorker
-from src.core.config import MultilingualConfig
-
-async def test():
-    config = MultilingualConfig()
-    worker = MultilingualWorker(config)
-    await worker.process_single_property('20246666')
-
-asyncio.run(test())
-"
+cd /root/real_estate_deployment
+docker-compose up -d
 ```
 
-## Troubleshooting
+## 📊 Statistics
 
-### Common Issues
+As of the latest check, the system contains:
+- **329,108 total properties**
+- **511 properties with English titles (0.2%)**
+- **511 properties with Russian titles (0.2%)**
+- **427 properties with complete English content (0.1%)**
+- **430 properties with complete Russian content (0.1%)**
+- **328,684 properties needing multilingual processing (99.9%)**
 
-1. **Database Connection Failed**
-   - Check `DATABASE_URL` format
-   - Ensure PostgreSQL is running and accessible
-   - Verify credentials and database name
+## 🔧 Configuration
 
-2. **API Authorization Failed**
-   - Check if `API_TOKEN` is valid and not expired
-   - Verify network connectivity to api-statements.tnet.ge
+The multilingual worker can be configured through environment variables in the main docker-compose.yml:
 
-3. **No Properties to Process**
-   - Ensure properties table has records with `external_id`
-   - Check if properties already have multilingual content
+```yaml
+multilingual_worker:
+  environment:
+    - BATCH_SIZE=10
+    - CHECK_INTERVAL=300  # Check every 5 minutes
+    - MODE=new
+    - SCRAPER_CONCURRENT_LANGUAGES=true
+```
 
-4. **Docker Issues**
-   - Ensure Docker network exists: `docker network create real_estate_network`
-   - Check environment variables are properly set
-   - Verify volume mounts for logs
+## 📈 Monitoring
 
-### Debug Mode
-
-Enable debug mode for detailed logging:
+Check worker logs:
 ```bash
-DEBUG_MODE=true python main.py
+docker logs comfyrent-multilingual-worker
 ```
 
-This will show:
-- Full API responses
-- SQL queries
-- Detailed processing steps
-- Performance metrics
+Check multilingual statistics:
+```bash
+docker exec -it comfyrent-backend python /app/check_multilingual_stats.py
+```
+
+## 🗂️ Log Directory
+
+This `logs/` directory may contain historical logs from the standalone worker setup and can be used for debugging purposes.
