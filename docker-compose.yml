@@ -27,8 +27,11 @@ services:
     deploy:
       resources:
         limits:
+          memory: 1.5G
+          cpus: '0.4'
+        reservations:
           memory: 1G
-          cpus: '0.5'
+          cpus: '0.2'
     logging:
       driver: "json-file"
       options:
@@ -81,7 +84,7 @@ services:
       - comfyrent-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "sh", "-c", "curl -f http://localhost:9000/minio/health/live || exit 1"]
+      test: ["CMD", "mc", "ready", "local"]
       interval: 30s
       timeout: 20s
       retries: 3
@@ -106,6 +109,13 @@ services:
     container_name: comfyrent-backend
     env_file:
       - .env.production
+    environment:
+      # Worker configuration for better performance
+      - WORKERS=4
+      - WORKER_CLASS=uvicorn.workers.UvicornWorker
+      - MAX_REQUESTS=1000
+      - MAX_REQUESTS_JITTER=50
+      - TIMEOUT=60
     ports:
       - "8000:8000"
     secrets:
@@ -132,8 +142,11 @@ services:
     deploy:
       resources:
         limits:
+          memory: 2G
+          cpus: '0.4'
+        reservations:
           memory: 1G
-          cpus: '0.5'
+          cpus: '0.2'
     logging:
       driver: "json-file"
       options:
@@ -173,6 +186,51 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # Background Task Worker (for heavy backend operations)
+  backend_worker:
+    build:
+      context: ./back-end
+      dockerfile: Dockerfile.production
+      args:
+        - BUILD_ENV=production
+    environment:
+      # Worker mode configuration
+      - WORKER_MODE=true
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - CONCURRENCY=2
+    env_file:
+      - .env.production
+    secrets:
+      - postgres_password
+      - minio_root_password
+      - jwt_secret_key
+      - redis_password
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    networks:
+      - comfyrent-network
+    restart: unless-stopped
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.2'
+        reservations:
+          memory: 512M
+          cpus: '0.1'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   # Production Scraper (Refactored)
   scraper:
     build:
@@ -191,6 +249,10 @@ services:
       - POSTGRES_USER=comfyrent_user
       # Logging
       - LOG_LEVEL=INFO
+      # Optimized scraper settings
+      - MAX_CONCURRENT_SCRAPERS=2
+      - BATCH_SIZE=20
+      - SCRAPE_DELAY=1
     secrets:
       - postgres_password
     depends_on:
@@ -205,8 +267,11 @@ services:
     deploy:
       resources:
         limits:
-          memory: 2G
-          cpus: '1.0'
+          memory: 1G
+          cpus: '0.2'
+        reservations:
+          memory: 512M
+          cpus: '0.1'
     logging:
       driver: "json-file"
       options:
@@ -219,7 +284,6 @@ services:
     build:
       context: ./multilingual-worker
       dockerfile: Dockerfile
-    container_name: comfyrent-multilingual-worker
     environment:
       # Database connection (password read from secrets file)
       - POSTGRES_HOST=postgres
@@ -227,12 +291,15 @@ services:
       - POSTGRES_DB=comfyrent_production
       - POSTGRES_USER=comfyrent_user
       - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
-      # Worker configuration
-      - BATCH_SIZE=50
-      - PROCESS_INTERVAL=300
+      - DATABASE_URL=postgresql+asyncpg://comfyrent_user:oS05j2bk7uM7iBUGwHpJdOn8zMDncnMrpXJWfDAjtd0=@postgres:5432/comfyrent_production
+      - API_TOKEN=dummy_token_placeholder
+      # Optimized worker configuration
+      - BATCH_SIZE=25
+      - PROCESS_INTERVAL=180
       - MAX_RETRIES=3
       - LOG_LEVEL=INFO
       - DEBUG_MODE=false
+      - WORKER_THREADS=2
     secrets:
       - postgres_password
     depends_on:
@@ -245,10 +312,14 @@ services:
       - multilingual_logs:/app/logs
       - ./multilingual-worker/logs:/app/logs
     deploy:
+      replicas: 2
       resources:
         limits:
-          memory: 1G
-          cpus: '0.5'
+          memory: 512M
+          cpus: '0.25'
+        reservations:
+          memory: 256M
+          cpus: '0.125'
     logging:
       driver: "json-file"
       options:

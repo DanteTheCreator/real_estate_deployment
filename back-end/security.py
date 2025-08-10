@@ -20,8 +20,21 @@ logger = logging.getLogger(__name__)
 if settings.rate_limit_enabled:
     try:
         redis_client = redis.from_url(settings.redis_url_with_auth)
+        
+        # Custom key function that considers both IP and endpoint
+        def custom_key_func(request: Request) -> str:
+            client_ip = get_remote_address(request)
+            endpoint = request.url.path
+            
+            # For health checks from localhost, use a separate key with higher limits
+            if (client_ip in {"127.0.0.1", "localhost", "::1", "172.20.0.1"} and 
+                endpoint == "/health"):
+                return f"health_{client_ip}"
+            
+            return client_ip
+        
         limiter = Limiter(
-            key_func=get_remote_address,
+            key_func=custom_key_func,
             storage_uri=settings.redis_url_with_auth,
             default_limits=["1000/day", "100/hour"]
         )
@@ -88,23 +101,33 @@ class SecurityMiddleware:
     async def _is_suspicious_request(self, request: Request) -> bool:
         """Detect suspicious request patterns"""
         user_agent = request.headers.get("user-agent", "").lower()
+        client_host = str(request.client.host)
+        request_path = str(request.url.path)
+        
+        # Allow health checks from localhost/container network - exempt from security checks
+        trusted_hosts = {"127.0.0.1", "localhost", "::1", "172.20.0.1"}
+        if (client_host in trusted_hosts and request_path == "/health"):
+            return False
         
         # Block common attack patterns
         suspicious_patterns = [
             "sqlmap", "nikto", "nmap", "masscan", "dirb", "gobuster",
-            "wpscan", "burpsuite", "metasploit", "curl", "wget", "python-requests"
+            "wpscan", "burpsuite", "metasploit", "wget", "python-requests"
         ]
         
-        # Block requests to root path from external IPs
-        client_host = str(request.client.host)
-        trusted_hosts = {"127.0.0.1", "localhost", "::1", "172.20.0.1"}
+        # Allow curl from trusted hosts (for health checks and internal calls)
+        if client_host in trusted_hosts:
+            suspicious_patterns = [p for p in suspicious_patterns if p != "curl"]
+        else:
+            suspicious_patterns.append("curl")
         
+        # Block requests to root path from external IPs
         if (client_host not in trusted_hosts and 
-            str(request.url.path) == "/" and 
+            request_path == "/" and 
             request.method == "GET"):
             logger.warning(f"External root path access from {client_host}")
             return True
-        
+
         if any(pattern in user_agent for pattern in suspicious_patterns):
             logger.warning(f"Suspicious user agent: {user_agent} from {request.client.host}")
             return True
@@ -112,7 +135,7 @@ class SecurityMiddleware:
         # Check for SQL injection patterns in query params
         query_string = str(request.query_params).lower()
         sql_patterns = ["union select", "drop table", "insert into", "delete from", "'or'1'='1"]
-        
+
         if any(pattern in query_string for pattern in sql_patterns):
             logger.warning(f"Potential SQL injection from {request.client.host}: {query_string}")
             return True
