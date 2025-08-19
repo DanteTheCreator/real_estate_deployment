@@ -291,7 +291,6 @@ services:
       - POSTGRES_DB=comfyrent_production
       - POSTGRES_USER=comfyrent_user
       - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
-      - DATABASE_URL=postgresql+asyncpg://comfyrent_user:oS05j2bk7uM7iBUGwHpJdOn8zMDncnMrpXJWfDAjtd0=@postgres:5432/comfyrent_production
       - API_TOKEN=dummy_token_placeholder
       # Optimized worker configuration
       - BATCH_SIZE=25
@@ -310,7 +309,6 @@ services:
     restart: unless-stopped
     volumes:
       - multilingual_logs:/app/logs
-      - ./multilingual-worker/logs:/app/logs
     deploy:
       replicas: 2
       resources:

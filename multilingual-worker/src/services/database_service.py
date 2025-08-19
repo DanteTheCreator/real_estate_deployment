@@ -41,13 +41,14 @@ class DatabaseService:
         try:
             async with self.async_session() as session:
                 # Query for properties that don't have English or Russian translations
-                query = text("""
+                query = text(
+                    """
                     SELECT id, external_id, title, description, 
                            title_en, title_ru, description_en, description_ru,
-                           created_at, updated_at, property_type, deal_type,
-                           price, currency, area, bedrooms, bathrooms, floor,
-                           total_floors, address, city, district, latitude, longitude,
-                           contact_name, phone, images, features, status_id
+                           created_at, updated_at, property_type, listing_type,
+                           rent_amount AS price, 'GEL' AS currency, square_feet AS area, bedrooms, bathrooms, 
+                           floor_number AS floor, total_floors, address, city, district, latitude, longitude,
+                           ''::text AS contact_name, ''::text AS phone, '[]'::json AS images, '[]'::json AS features, NULL::int AS status_id
                     FROM properties 
                     WHERE (title_en IS NULL OR title_ru IS NULL OR 
                            description_en IS NULL OR description_ru IS NULL)
@@ -55,44 +56,24 @@ class DatabaseService:
                     AND title IS NOT NULL
                     ORDER BY created_at DESC 
                     LIMIT :limit
-                """)
+                    """
+                )
                 
                 result = await session.execute(query, {"limit": limit})
-                rows = result.fetchall()
+                rows = result.mappings().all()
                 
-                properties = []
+                properties: List[PropertyData] = []
                 for row in rows:
                     # Convert row to PropertyData object
                     property_data = PropertyData(
-                        id=row.id,
-                        external_id=row.external_id,
-                        title=row.title,
-                        description=row.description,
-                        title_en=row.title_en,
-                        title_ru=row.title_ru,
-                        description_en=row.description_en,
-                        description_ru=row.description_ru,
-                        property_type=row.property_type,
-                        deal_type=row.deal_type,
-                        price=row.price,
-                        currency=row.currency,
-                        area=row.area,
-                        bedrooms=row.bedrooms,
-                        bathrooms=row.bathrooms,
-                        floor=row.floor,
-                        total_floors=row.total_floors,
-                        address=row.address,
-                        city=row.city,
-                        district=row.district,
-                        latitude=row.latitude,
-                        longitude=row.longitude,
-                        contact_name=row.contact_name,
-                        phone=row.phone,
-                        images=row.images,
-                        features=row.features,
-                        status_id=row.status_id,
-                        created_at=row.created_at,
-                        updated_at=row.updated_at
+                        id=row.get("id"),
+                        external_id=row.get("external_id"),
+                        title=row.get("title") or "",
+                        description=row.get("description") or "",
+                        title_en=row.get("title_en"),
+                        title_ru=row.get("title_ru"),
+                        description_en=row.get("description_en"),
+                        description_ru=row.get("description_ru"),
                     )
                     properties.append(property_data)
                 
@@ -111,7 +92,8 @@ class DatabaseService:
         try:
             async with self.async_session() as session:
                 # Update the property with multilingual content
-                update_query = text("""
+                update_query = text(
+                    """
                     UPDATE properties 
                     SET title_en = :title_en,
                         title_ru = :title_ru,
@@ -119,14 +101,15 @@ class DatabaseService:
                         description_ru = :description_ru,
                         updated_at = NOW()
                     WHERE id = :property_id
-                """)
+                    """
+                )
                 
                 await session.execute(update_query, {
                     "title_en": property_data.title_en,
                     "title_ru": property_data.title_ru,
                     "description_en": property_data.description_en,
                     "description_ru": property_data.description_ru,
-                    "property_id": property_data.id
+                    "property_id": property_data.id,
                 })
                 
                 await session.commit()
@@ -146,21 +129,23 @@ class DatabaseService:
         """Get count of properties that need multilingual processing."""
         try:
             async with self.async_session() as session:
-                query = text("""
+                query = text(
+                    """
                     SELECT COUNT(*) as count
                     FROM properties 
                     WHERE (title_en IS NULL OR title_ru IS NULL OR 
                            description_en IS NULL OR description_ru IS NULL)
                     AND external_id IS NOT NULL 
                     AND title IS NOT NULL
-                """)
+                    """
+                )
                 
                 result = await session.execute(query)
-                row = result.fetchone()
-                count = row.count if row else 0
+                row = result.mappings().first()
+                count = (row or {}).get("count", 0)
                 
                 self.logger.info(f"Total properties pending translation: {count}")
-                return count
+                return int(count)
                 
         except SQLAlchemyError as e:
             self.logger.error(f"Database error getting pending translation count: {e}")

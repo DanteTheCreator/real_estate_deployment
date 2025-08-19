@@ -10,6 +10,9 @@ from typing import Optional
 class PropertyData:
     """Data structure for property information with multilingual support."""
     
+    # Database identifier
+    id: Optional[int] = None
+    
     # Identifiers
     external_id: Optional[str] = None
     

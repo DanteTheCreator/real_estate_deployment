@@ -57,6 +57,22 @@ class MultilingualWorker:
     
     def __init__(self, config: MultilingualConfig, batch_size: int = 10):
         """Initialize the multilingual worker."""
+        # If DATABASE_URL is not provided, construct it from POSTGRES_* env and secret file
+        if not config.DATABASE_URL:
+            password = config.POSTGRES_PASSWORD
+            if not password and os.path.exists(config.POSTGRES_PASSWORD_FILE):
+                try:
+                    with open(config.POSTGRES_PASSWORD_FILE, 'r') as f:
+                        password = f.read().strip()
+                except Exception as e:
+                    raise RuntimeError(f"Failed to read database password: {e}")
+            if not password:
+                raise RuntimeError("Database password not provided for multilingual worker")
+            config.DATABASE_URL = (
+                f"postgresql+asyncpg://{config.POSTGRES_USER}:{password}@"
+                f"{config.POSTGRES_HOST}:{config.POSTGRES_PORT}/{config.POSTGRES_DB}"
+            )
+        
         self.config = config
         self.batch_size = batch_size
         self.stats = ProcessingStats()
@@ -168,6 +184,13 @@ class MultilingualWorker:
         """Run batch processing for multilingual content."""
         self.logger.info(f"🚀 Starting multilingual batch processing")
         self.stats.start_time = datetime.now()
+        
+        # Log pending count for visibility
+        try:
+            pending = await self.database_service.get_total_properties_pending_translation()
+            self.logger.info(f"Pending properties for translation (pre-query): {pending}")
+        except Exception:
+            pass
         
         properties = await self.get_properties_needing_translation(limit)
         self.logger.info(f"📋 Found {len(properties)} properties needing translation")

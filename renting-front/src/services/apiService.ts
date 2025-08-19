@@ -1,7 +1,34 @@
 import { API_ENDPOINTS } from '@/types';
 
+// Resolve API base URL robustly for prod/staging/dev
+function resolveBaseUrl(): string {
+  const envUrl = import.meta.env.VITE_API_URL as string | undefined;
+  if (envUrl && envUrl.trim().length > 0) {
+    const u = envUrl.trim();
+    // Absolute URL provided
+    if (u.startsWith('http://') || u.startsWith('https://')) {
+      return u.replace(/\/$/, '');
+    }
+    // Relative path (e.g. /api) -> prefer same-origin proxy; on :3000 map to backend :8000
+    if (u.startsWith('/')) {
+      const origin = window.location.origin;
+      if (origin.includes(':3000')) {
+        return origin.replace(':3000', ':8000') + u;
+      }
+      return `${origin}${u}`.replace(/\/$/, '');
+    }
+  }
+  // No env set: prefer same-origin /api if behind reverse proxy
+  const origin = window.location.origin;
+  if (origin.includes(':3000')) {
+    // Common docker compose mapping: send to backend on :8000
+    return origin.replace(':3000', ':8000') + '/api';
+  }
+  return origin + '/api';
+}
+
 // Base API configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const API_BASE_URL = resolveBaseUrl();
 
 interface RequestConfig extends RequestInit {
   requiresAuth?: boolean;
@@ -67,7 +94,7 @@ class ApiService {
     const headers = {
       ...this.getDefaultHeaders(),
       ...requestConfig.headers,
-    };
+    } as Record<string, string>;
 
     // Set Content-Type for JSON if not already set and body is not FormData
     if (requestConfig.body && !(requestConfig.body instanceof FormData) && !headers['Content-Type']) {
@@ -82,6 +109,7 @@ class ApiService {
     const response = await fetch(url, {
       ...requestConfig,
       headers,
+      credentials: 'include',
     });
 
     return this.handleResponse<T>(response);
@@ -125,13 +153,13 @@ class ApiService {
     const formData = new FormData();
     formData.append('file', file);
 
-    const headers = { ...this.getDefaultHeaders() };
-    delete (headers as Record<string, string>)['Content-Type']; // Let browser set multipart boundary
+    const headers = { ...this.getDefaultHeaders() } as Record<string, string>;
+    delete headers['Content-Type']; // Let browser set multipart boundary
 
     return this.request<T>(endpoint, {
       ...config,
       method: 'POST',
-      body: formData,
+      body: formData as unknown as BodyInit,
       headers,
     });
   }
@@ -139,17 +167,17 @@ class ApiService {
   // Multiple file upload
   async uploadFiles<T>(endpoint: string, files: File[], config?: RequestConfig): Promise<T> {
     const formData = new FormData();
-    files.forEach((file, index) => {
-      formData.append(`files`, file);
+    files.forEach((file) => {
+      formData.append('files', file);
     });
 
-    const headers = { ...this.getDefaultHeaders() };
-    delete (headers as Record<string, string>)['Content-Type']; // Let browser set multipart boundary
+    const headers = { ...this.getDefaultHeaders() } as Record<string, string>;
+    delete headers['Content-Type']; // Let browser set multipart boundary
 
     return this.request<T>(endpoint, {
       ...config,
       method: 'POST',
-      body: formData,
+      body: formData as unknown as BodyInit,
       headers,
     });
   }

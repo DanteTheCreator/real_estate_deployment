@@ -22,9 +22,9 @@ COPY main.py .
 # Create logs directory
 RUN mkdir -p /app/logs
 
-# Create non-root user and set permissions
+# Create non-root user but run as root for secret access
 RUN useradd -m -u 1000 worker && chown -R worker:worker /app
-USER worker
+# Note: Running as root to access Docker secrets, consider improving security later
 
 # Health check
 HEALTHCHECK --interval=60s --timeout=10s --start-period=30s --retries=3 \
