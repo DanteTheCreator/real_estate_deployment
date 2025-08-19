@@ -165,10 +165,10 @@ const ListingCard: React.FC<ListingCardProps> = ({ property }) => {
         <CardContent className="p-4">
           <div className="space-y-3">
             <div>
-              <h3 className="font-semibold text-lg line-clamp-2 group-hover:text-blue-600 transition-colors">
+              <h3 className="font-semibold text-lg line-clamp-2 group-hover:text-link transition-colors text-foreground">
                 {localizedProperty.title}
               </h3>
-              <div className="flex items-center text-sm text-gray-600 mt-1">
+              <div className="flex items-center text-sm text-foreground mt-1">
                 <MapPin className="h-4 w-4 mr-1" />
                 <span className="line-clamp-1">{formatAddress(property)}</span>
               </div>
@@ -189,7 +189,7 @@ const ListingCard: React.FC<ListingCardProps> = ({ property }) => {
             
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-xl font-bold text-gray-900">
+                <div className="text-xl font-bold text-primary">
                   {formatPrice(property.rent_amount, property.rent_amount_usd, property.listing_type)}
                 </div>
               </div>

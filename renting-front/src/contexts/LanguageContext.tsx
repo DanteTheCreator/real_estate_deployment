@@ -274,6 +274,7 @@ const translations = {
     'header.dashboard': 'მართვის პანელი',
     'header.logout': 'გასვლა',
     'header.login': 'შესვლა',
+    'header.listProperty': 'ბინის განცხადება',
     'header.publishAd': 'განცხადების გამოქვეყნება',
     'header.welcome': 'მოგესალმებით',
     
@@ -538,6 +539,7 @@ const translations = {
     'header.dashboard': 'Панель управления',
     'header.logout': 'Выйти',
     'header.login': 'Войти',
+    'header.listProperty': 'Разместить недвижимость',
     'header.publishAd': 'Опубликовать объявление',
     'header.welcome': 'Добро пожаловать',
     

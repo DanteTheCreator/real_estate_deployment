@@ -30,7 +30,7 @@ export const SortComponent: React.FC<SortComponentProps> = ({
   compact = false
 }) => {
   const sortOptions = [
-    { value: 'date', label: 'Date Added', icon: '📅' },
+    { value: 'date', label: 'Date Added', icon: '📅', className: 'text-black' },
     { value: 'price', label: 'Price', icon: '💰' },
     { value: 'area', label: 'Area (m²)', icon: '📐' },
     { value: 'bedrooms', label: 'Bedrooms', icon: '🛏️' },
@@ -101,7 +101,7 @@ export const SortComponent: React.FC<SortComponentProps> = ({
                 <SelectItem key={option.value} value={option.value}>
                   <div className="flex items-center gap-2">
                     <span>{option.icon}</span>
-                    <span>{option.label}</span>
+                    <span className={option.value === 'date' ? 'text-black' : ''}>{option.label}</span>
                   </div>
                 </SelectItem>
               ))}

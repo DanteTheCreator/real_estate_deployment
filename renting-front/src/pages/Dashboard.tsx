@@ -187,9 +187,9 @@ const Dashboard: React.FC = () => {
                             className="flex-1 cursor-pointer"
                           >
                             <div className="flex-1">
-                              <h3 className="text-lg font-semibold text-slate-800 mb-2 group-hover:text-blue-600 transition-colors">{listing.title}</h3>
-                              <div className="flex items-center gap-4 text-sm text-slate-600">
-                                <span className="font-medium">{formatPrice(listing.rent_amount, listing.rent_amount_usd, listing.listing_type)}</span>
+                              <h3 className="text-lg font-semibold text-foreground mb-2 group-hover:text-link transition-colors">{listing.title}</h3>
+                              <div className="flex items-center gap-4 text-sm text-foreground">
+                                <span className="font-medium text-primary">{formatPrice(listing.rent_amount, listing.rent_amount_usd, listing.listing_type)}</span>
                                 <Badge variant={listing.status === 'active' ? 'default' : 'secondary'}>
                                   {listing.status === 'active' ? t('common.active') : t('common.inactive')}
                                 </Badge>
@@ -245,9 +245,9 @@ const Dashboard: React.FC = () => {
                             className="flex-1 cursor-pointer"
                           >
                             <div className="flex-1">
-                              <h3 className="text-lg font-semibold text-slate-800 mb-2 group-hover:text-blue-600 transition-colors">{listing.title}</h3>
-                              <div className="flex items-center gap-4 text-sm text-slate-600">
-                                <span className="font-medium">{formatPrice(listing.rent_amount, listing.rent_amount_usd, listing.listing_type)}</span>
+                              <h3 className="text-lg font-semibold text-foreground mb-2 group-hover:text-link transition-colors">{listing.title}</h3>
+                              <div className="flex items-center gap-4 text-sm text-foreground">
+                                <span className="font-medium text-primary">{formatPrice(listing.rent_amount, listing.rent_amount_usd, listing.listing_type)}</span>
                                 <span>{listing.city}, {listing.state}</span>
                               </div>
                             </div>

@@ -387,7 +387,7 @@ Thank you!`;
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="flex items-center space-x-2">
                       <Calendar className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm text-gray-600">Available from: {formatDate(property.created_at)}</span>
+                      <span className="text-sm text-gray-600">Available from: <span className="date-added">{formatDate(property.created_at)}</span></span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <DollarSign className="h-4 w-4 text-gray-500" />
@@ -458,7 +458,7 @@ Thank you!`;
                   <div className="mt-6 pt-6 border-t">
                     <div className="text-sm text-gray-600 space-y-2">
                       <p><strong>Property ID:</strong> #{property.id}</p>
-                      <p><strong>Listed:</strong> {formatDate(property.created_at)}</p>
+                      <p><strong>Listed:</strong> <span className="date-added">{formatDate(property.created_at)}</span></p>
                       <p><strong>Views:</strong> 127 this week</p>
                     </div>
                   </div>

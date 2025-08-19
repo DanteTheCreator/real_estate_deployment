@@ -89,7 +89,7 @@ const Index: React.FC = () => {
           {/* Results Header with Sort */}
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-foreground mb-2">
+              <h1 className="text-3xl font-bold text-primary mb-2">
                 Discover Your Perfect Home
               </h1>
               {totalAvailableProperties !== null && (
