@@ -12,7 +12,7 @@ COPY package*.json ./
 
 # Install all dependencies (including dev dependencies needed for build)
 # Don't set NODE_ENV=production yet as we need devDependencies for the build
-RUN npm ci && npm cache clean --force
+RUN npm install --no-audit --no-fund && npm cache clean --force
 
 # Copy source code
 COPY . .
@@ -20,8 +20,8 @@ COPY . .
 # Set production environment for the build
 ENV NODE_ENV=production
 
-# Build the application
-RUN npx vite build
+# Build the application (includes postbuild sitemap generation via package.json)
+RUN npm run build
 
 # Production stage with a simple HTTP server
 FROM node:18-alpine
@@ -32,7 +32,7 @@ RUN npm install -g serve
 # Create app directory
 WORKDIR /app
 
-# Copy built application from builder stage
+# Copy built application from builder stage (dist already has sitemap.xml)
 COPY --from=builder /app/dist .
 
 # Create non-root user

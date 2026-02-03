@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { SEO } from '@/components/SEO';
 import { AppLayout } from '@/components/AppLayout';
 import { ListingGrid } from '@/components/ListingGrid';
 import { SortComponent } from '@/components/SortComponent';
@@ -84,12 +85,26 @@ const Index: React.FC = () => {
 
   return (
     <AppLayout showBanner={true} showSearch={true} onSearch={handleSearch}>
+      <SEO
+        title="Discover Your Perfect Home"
+        description="Browse unique rental and sale properties in Georgia. One listing per property ensures no duplicates and a cleaner search experience."
+        canonical="https://comfyrent.homes/"
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'ItemList',
+          itemListElement: properties.slice(0, 20).map((p, i) => ({
+            '@type': 'ListItem',
+            position: i + 1,
+            url: `https://comfyrent.homes/property/${p.id}`
+          }))
+        }}
+      />
       <div className="py-8">
         <div className="container mx-auto px-4">
           {/* Results Header with Sort */}
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-primary mb-2">
+              <h1 className="text-3xl font-bold text-foreground mb-2">
                 Discover Your Perfect Home
               </h1>
               {totalAvailableProperties !== null && (

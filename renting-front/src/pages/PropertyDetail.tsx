@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { SEO } from '@/components/SEO';
 import { Link, useParams } from 'react-router-dom';
 import { AppLayout } from '@/components/AppLayout';
 import { Badge } from '@/components/ui/badge';
@@ -265,6 +266,43 @@ Thank you!`;
 
   return (
     <AppLayout>
+      <SEO
+        title={localizedProperty.title}
+        description={localizedProperty.description?.slice(0, 155)}
+        canonical={`https://comfyrent.homes/property/${localizedProperty.id}`}
+        type="article"
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'RealEstateListing',
+          name: localizedProperty.title,
+          description: localizedProperty.description,
+          url: `https://comfyrent.homes/property/${localizedProperty.id}`,
+          datePosted: property.created_at,
+            address: {
+              '@type': 'PostalAddress',
+              streetAddress: localizedProperty.address,
+              addressLocality: localizedProperty.city,
+            },
+          offers: {
+            '@type': 'Offer',
+            priceCurrency: currency.toUpperCase(),
+            price: localizedProperty.rent_amount || localizedProperty.rent_amount_usd || 0,
+            availability: localizedProperty.is_available ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+            url: `https://comfyrent.homes/property/${localizedProperty.id}`
+          },
+          numberOfRooms: property.bedrooms,
+          floorSize: property.square_feet ? {
+            '@type': 'QuantitativeValue',
+            value: property.square_feet,
+            unitCode: 'FTK'
+          } : undefined,
+          additionalProperty: [
+            { '@type': 'PropertyValue', name: 'Bedrooms', value: property.bedrooms },
+            { '@type': 'PropertyValue', name: 'Bathrooms', value: property.bathrooms },
+            { '@type': 'PropertyValue', name: 'Property Type', value: property.property_type }
+          ]
+        }}
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Breadcrumb */}
         <nav className="flex items-center space-x-2 text-sm text-gray-500 mb-6">

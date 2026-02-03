@@ -42,6 +42,9 @@ const PropertyGallery: React.FC<PropertyGalleryProps> = ({ images, title }) => {
             src={displayImages[currentIndex]} 
             alt={orderedImages[currentIndex]?.caption || `${title} - Image ${currentIndex + 1}`}
             className="w-full h-full object-cover"
+            loading="eager"
+            decoding="async"
+            fetchPriority="high"
           />
           
           {/* Navigation Arrows */}
@@ -105,6 +108,8 @@ const PropertyGallery: React.FC<PropertyGalleryProps> = ({ images, title }) => {
                 src={image} 
                 alt={orderedImages[index]?.caption || `Thumbnail ${index + 1}`}
                 className="w-full h-full object-cover"
+                loading="lazy"
+                decoding="async"
               />
             </button>
           ))}

@@ -12,3 +12,8 @@ Allow: /
 
 User-agent: *
 Allow: /
+
+# Crawl directives
+Crawl-delay: 2
+
+Sitemap: https://comfyrent.homes/sitemap.xml

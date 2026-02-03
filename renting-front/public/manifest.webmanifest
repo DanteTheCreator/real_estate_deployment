@@ -1,0 +1,16 @@
+{
+  "name": "ComfyRent - Property Search",
+  "short_name": "ComfyRent",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0f172a",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "/logo-comfyrent.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
